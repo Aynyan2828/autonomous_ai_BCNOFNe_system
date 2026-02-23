@@ -9,6 +9,16 @@ import os
 import json
 from datetime import datetime
 from typing import Optional, Dict
+from pathlib import Path
+from dotenv import load_dotenv
+
+# .envファイルを読み込み
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+else:
+    # 代替パスも試す
+    load_dotenv("/home/pi/autonomous_ai/.env")
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
