@@ -1,0 +1,19 @@
+# Python依存パッケージ一覧
+
+# OpenAI API
+openai>=1.0.0
+
+# LINE Bot
+line-bot-sdk>=3.0.0
+
+# Discord（Webhook使用のため requests のみ）
+requests>=2.31.0
+
+# Web自動操作
+playwright>=1.40.0
+
+# Webフレームワーク（LINE Webhook用）
+flask>=3.0.0
+
+# ユーティリティ
+python-dotenv>=1.0.0

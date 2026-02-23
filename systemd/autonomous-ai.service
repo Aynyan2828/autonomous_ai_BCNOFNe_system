@@ -1,0 +1,34 @@
+[Unit]
+Description=Autonomous AI Agent System
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/autonomous_ai/src
+EnvironmentFile=/home/pi/autonomous_ai/.env
+
+# メインプログラム実行
+ExecStart=/usr/bin/python3 /home/pi/autonomous_ai/src/main.py
+
+# 自動再起動設定（30秒後）
+Restart=always
+RestartSec=30
+
+# 標準出力・エラー出力をjournalに記録
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=autonomous-ai
+
+# リソース制限
+MemoryLimit=1G
+CPUQuota=80%
+
+# セキュリティ設定
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

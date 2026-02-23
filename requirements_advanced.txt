@@ -1,0 +1,22 @@
+# 高度な機能用Pythonパッケージ
+
+# ベクトルデータベース
+chromadb==0.4.22
+faiss-cpu==1.7.4
+
+# 自動テスト生成
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+
+# Git連携
+GitPython==3.1.40
+
+# 既存の依存関係（requirements.txtから）
+openai>=1.0.0
+python-dotenv==1.0.0
+requests==2.31.0
+psutil==5.9.8
+playwright==1.40.0
+discord-webhook==1.3.0
+flask==3.0.0

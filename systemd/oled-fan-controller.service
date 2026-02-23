@@ -1,0 +1,26 @@
+[Unit]
+Description=OLED Fan Controller Service
+Documentation=https://github.com/your-repo/autonomous_ai_system
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/autonomous_ai/hardware
+ExecStart=/usr/bin/python3 /home/pi/autonomous_ai/hardware/oled_fan_controller.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# 環境変数
+Environment="PYTHONUNBUFFERED=1"
+
+# リソース制限
+Nice=10
+CPUQuota=5%
+MemoryLimit=100M
+
+[Install]
+WantedBy=multi-user.target
