@@ -88,7 +88,7 @@
 
 いよいよ、BCNOFNeシステム本体をインストールします。ここからは、すべてのコマンドをSSH接続したターミナルで実行します。
 
-### ステップ1: ファイルのダウンロードと展開
+### ステップ1: GitHubからのダウンロード
 
 1.  まず、`git` というツールをインストールします。
 
@@ -96,28 +96,13 @@
     sudo apt install git -y
     ```
 
-2.  BCNOFNeシステムのZIPファイルをダウンロードします。（このコマンドは、このプロジェクトの最新版をダウンロードします）
+2.  GitHubからBCNOFNeシステムの全ファイルをダウンロード（クローン）します。
 
     ```bash
-    # このコマンドはダミーです。実際のダウンロードリンクに置き換えてください。
-    # wget https://example.com/autonomous_ai_BCNOFNe_system.zip
-    # ここでは、添付されたZIPファイルを転送したと仮定します。
-    ```
-    **注:** 実際には、添付された `autonomous_ai_BCNOFNe_system.zip` をRaspberry Piに転送する必要があります。`scp` コマンドなどを使うのが一般的です。
-
-    **例（PCのターミナルから実行）:**
-    ```bash
-    scp /path/to/autonomous_ai_BCNOFNe_system.zip pi@192.168.1.15:/home/pi/
+    git clone https://github.com/Aynyan2828/autonomous_ai_BCNOFNe_system.git
     ```
 
-3.  ダウンロードしたZIPファイルを展開（解凍）します。
-
-    ```bash
-    sudo apt install unzip -y
-    unzip autonomous_ai_BCNOFNe_system.zip
-    ```
-
-4.  プロジェクトディレクトリに移動します。
+3.  ダウンロードしたプロジェクトディレクトリに移動します。
 
     ```bash
     cd autonomous_ai_BCNOFNe_system

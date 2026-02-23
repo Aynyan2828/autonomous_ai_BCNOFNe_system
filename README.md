@@ -1,10 +1,11 @@
-# 完全自律型AIシステム on Raspberry Pi 4B
+# BCNOFNe（ボクノフネ）- 完全自律型AIシステム on Raspberry Pi 4B
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Raspberry Pi 4B](https://img.shields.io/badge/Raspberry%20Pi-4B-red.svg)](https://www.raspberrypi.com/)
+[![GitHub stars](https://img.shields.io/github/stars/Aynyan2828/autonomous_ai_BCNOFNe_system?style=social)](https://github.com/Aynyan2828/autonomous_ai_BCNOFNe_system/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Aynyan2828/autonomous_ai_BCNOFNe_system?style=social)](https://github.com/Aynyan2828/autonomous_ai_BCNOFNe_system/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/Aynyan2828/autonomous_ai_BCNOFNe_system)](https://github.com/Aynyan2828/autonomous_ai_BCNOFNe_system/issues)
+[![License: MIT](https://img.shields.io/github/license/Aynyan2828/autonomous_ai_BCNOFNe_system)](./LICENSE)
 
-**GPTを搭載した完全自律型のパーソナルAIサーバー**
+****BCNOFNe（ボクノフネ）** は、GPTを搭載した完全自律型のパーソナルAIサーバーです。**
 
 Raspberry Pi 4B上で24時間365日稼働し、自律的に思考・行動し、長期的な記憶を持ち、外部サービスと連携しながら、厳格な課金制御の下で動作するAIシステムです。
 
@@ -103,7 +104,18 @@ autonomous_ai_system/
 
 ---
 
-## 🚀 クイックスタート
+## 🚀 はじめに
+
+このリポジトリは、Raspberry Pi 4B上で動作する完全自律型AIサーバー「BCNOFNe（ボクノフネ）」の全ソースコードとドキュメントを管理しています。
+
+### 📖 まずはガイドを読もう！
+
+このシステムは非常に多機能なため、まずは以下のドキュメントを読むことを強く推奨します。
+
+- **[🚀 INSTALL_GUIDE_ULTIMATE.md](./INSTALL_GUIDE_ULTIMATE.md)**: **完全初心者向けの超詳細インストールガイド。ここから始めましょう！**
+- **[📖 USER_MANUAL.md](./USER_MANUAL.md)**: 日常的な運用方法やAIとの対話方法。
+
+## 🚀 クイックスタート（技術者向け）
 
 ### 必要なもの
 
@@ -116,11 +128,12 @@ autonomous_ai_system/
 
 ### インストール
 
-詳細な手順は [INSTALL_GUIDE.md](./INSTALL_GUIDE.md) を参照してください。
+詳細な手順は **[INSTALL_GUIDE_ULTIMATE.md](./INSTALL_GUIDE_ULTIMATE.md)** を参照してください。
 
 ```bash
 # 1. プロジェクトをクローン
-git clone https://github.com/your-repo/autonomous-ai.git /home/pi/autonomous_ai
+git clone https://github.com/Aynyan2828/autonomous_ai_BCNOFNe_system.git
+cd autonomous_ai_BCNOFNe_system
 cd /home/pi/autonomous_ai
 
 # 2. 依存パッケージをインストール
@@ -144,7 +157,31 @@ journalctl -u autonomous-ai.service -f
 
 ---
 
-## 📖 ドキュメント
+## 📚 ドキュメント一覧
+
+このプロジェクトには、初心者から上級者まで、すべてのユーザーをサポートするための豊富なドキュメントが用意されています。
+
+### 🚀 初心者向けガイド（4つ）
+1. **[RASPBERRY_PI_SETUP_GUIDE.md](./RASPBERRY_PI_SETUP_GUIDE.md)**: Raspberry Piの初期設定
+2. **[SSH_IP_GUIDE.md](./SSH_IP_GUIDE.md)**: SSH接続とIPアドレスの確認
+3. **[INSTALL_GUIDE_ULTIMATE.md](./INSTALL_GUIDE_ULTIMATE.md)**: BCNOFNeシステムのインストール
+4. **[EXISTING_OS_GUIDE.md](./EXISTING_OS_GUIDE.md)**: 既存のRaspberry Pi OSへの追加インストール
+
+### 📚 コアシステムドキュメント
+5. **[USER_MANUAL.md](./USER_MANUAL.md)**: 取扱説明書（日常運用方法）
+6. **[ARCHITECTURE.md](./ARCHITECTURE.md)**: システムアーキテクチャ設計書
+7. **[SELF_EVOLUTION.md](./SELF_EVOLUTION.md)**: 自己進化機能技術仕様書
+
+### 🔬 高度な機能ドキュメント
+8. **[ADVANCED_FEATURES.md](./ADVANCED_FEATURES.md)**: 高度な機能技術仕様書
+9. **[AI_FILE_ORGANIZER_TAILSCALE.md](./AI_FILE_ORGANIZER_TAILSCALE.md)**: AI自動ファイル整理 & Tailscale技術仕様書
+
+### ⚙️ ハードウェアドキュメント
+10. **[hardware/README_HARDWARE.md](./hardware/README_HARDWARE.md)**: OLED・ファン制御概要
+11. **[hardware/INSTALL_GUIDE_HARDWARE.md](./hardware/INSTALL_GUIDE_HARDWARE.md)**: インストールガイド
+
+### 🤝 コミュニティ
+12. **[CONTRIBUTING.md](./CONTRIBUTING.md)**: プロジェクトへの貢献方法
 
 - **[INSTALL_GUIDE.md](./INSTALL_GUIDE.md)**: 初心者向け詳細インストール手順（全ソースコード付き）
 - **[USER_MANUAL.md](./USER_MANUAL.md)**: 取扱説明書（日常的な運用方法）
@@ -162,7 +199,7 @@ journalctl -u autonomous-ai.service -f
 - 課金監視機能を過信せず、OpenAI公式サイトでも定期的に利用額を確認してください
 - AIが実行するコマンドを定期的に監視してください
 
-詳細は [INSTALL_GUIDE.md の「6. セキュリティに関する注意」](./INSTALL_GUIDE.md#6-セキュリティに関する注意) を参照してください。
+詳細は **[INSTALL_GUIDE_ULTIMATE.md](./INSTALL_GUIDE_ULTIMATE.md)** のセキュリティに関するセクションを参照してください。
 
 ---
 
@@ -198,7 +235,11 @@ sudo systemctl stop autonomous-ai.service
 
 ---
 
-## 🌱 将来の拡張案
+## 🤝 貢献
+
+このプロジェクトはオープンソースです。バグ報告、機能提案、ドキュメントの改善、コードの修正など、どんな形でも貢献を歓迎します。
+
+詳細は **[CONTRIBUTING.md](./CONTRIBUTING.md)** を参照してください。
 
 - ベクトルデータベース (ChromaDB, FAISS) の導入
 - マルチモーダル対応 (GPT-4V)
@@ -209,7 +250,7 @@ sudo systemctl stop autonomous-ai.service
 
 ---
 
-## 📄 ライセンス
+## 📜 ライセンス
 
 MIT License
 
