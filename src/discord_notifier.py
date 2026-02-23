@@ -128,7 +128,8 @@ class DiscordNotifier:
         iteration: int,
         goal: str,
         commands: List[str],
-        results: List[Dict]
+        results: List[Dict],
+        thinking: str = ""
     ) -> bool:
         """
         実行ログを送信
@@ -138,6 +139,7 @@ class DiscordNotifier:
             goal: 現在の目標
             commands: 実行したコマンドのリスト
             results: 実行結果のリスト
+            thinking: AIの思考プロセス
             
         Returns:
             成功したらTrue
@@ -151,22 +153,36 @@ class DiscordNotifier:
         success_count = sum(1 for r in results if r.get("success", False))
         fail_count = len(results) - success_count
         
+        # AIの思考プロセスを追加
+        fields = []
+        
+        # 思考プロセスがあれば追加
+        if thinking:
+            thinking_short = thinking[:300] + "..." if len(thinking) > 300 else thinking
+            fields.append({
+                "name": "🧠 AIの思考",
+                "value": thinking_short,
+                "inline": False
+            })
+        
+        fields.extend([
+            {
+                "name": "実行コマンド",
+                "value": cmd_text if cmd_text else "なし",
+                "inline": False
+            },
+            {
+                "name": "実行結果",
+                "value": f"✅ 成功: {success_count} / ❌ 失敗: {fail_count}",
+                "inline": False
+            }
+        ])
+        
         embed = {
             "title": f"📊 実行ログ #{iteration}",
             "description": f"**目標**: {goal}",
             "color": 0x0099FF,  # 青
-            "fields": [
-                {
-                    "name": "実行コマンド",
-                    "value": cmd_text if cmd_text else "なし",
-                    "inline": False
-                },
-                {
-                    "name": "実行結果",
-                    "value": f"✅ 成功: {success_count} / ❌ 失敗: {fail_count}",
-                    "inline": False
-                }
-            ],
+            "fields": fields,
             "timestamp": datetime.utcnow().isoformat()
         }
         

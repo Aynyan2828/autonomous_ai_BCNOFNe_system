@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import signal
+import json
 from datetime import datetime
 from typing import Optional
 
@@ -36,6 +37,7 @@ from line_bot import LINEBot
 from browser_controller import BrowserController
 from storage_manager import StorageManager
 from billing_guard import BillingGuard
+from startup_flag import StartupFlag
 
 
 class IntegratedSystem:
@@ -87,7 +89,14 @@ class IntegratedSystem:
         self.running = False
     
     def send_startup_notifications(self):
-        """起動通知を送信"""
+        """起動通知を送信（重複防止付き）"""
+        # 起動フラグチェック
+        startup_flag = StartupFlag("/home/pi/autonomous_ai/.startup_flag")
+        
+        if not startup_flag.should_send_startup_notification(cooldown_minutes=5):
+            print("起動通知は最近5分以内に送信済みです。スキップします。")
+            return
+        
         print("起動通知を送信中...")
         
         # Discord通知
@@ -111,6 +120,42 @@ class IntegratedSystem:
         # LINE通知
         self.line.send_shutdown_notification(reason)
     
+    def check_line_commands(self):
+        """
+        LINEからのコマンドをチェック
+        """
+        command_file = "/home/pi/autonomous_ai/commands/user_commands.jsonl"
+        
+        if not os.path.exists(command_file):
+            return
+        
+        try:
+            # 未読コマンドを読み込み
+            with open(command_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            if not lines:
+                return
+            
+            # 最後のコマンドを取得
+            last_command = json.loads(lines[-1])
+            command_text = last_command.get("command", "")
+            
+            if command_text:
+                # 目標を更新
+                self.agent.current_goal = command_text
+                self.agent.log(f"LINEコマンドを受信: {command_text}", "INFO")
+                
+                # コマンドファイルをクリア
+                os.remove(command_file)
+                
+                # 確認通知
+                self.line.send_message(f"✅ 目標を設定しました:\n{command_text}")
+                self.discord.send_message(f"📨 LINEから新しい目標を受信:\n{command_text}")
+        
+        except Exception as e:
+            self.agent.log(f"LINEコマンド読み取りエラー: {e}", "ERROR")
+    
     def run_iteration_with_monitoring(self) -> bool:
         """
         監視付きイテレーション実行
@@ -119,6 +164,8 @@ class IntegratedSystem:
             成功したらTrue
         """
         try:
+            # LINEコマンドチェック
+            self.check_line_commands()
             # 課金チェック
             alert = self.billing.check_threshold()
             
@@ -179,11 +226,23 @@ class IntegratedSystem:
                 
                 # Discord/LINE通知
                 if self.agent.iteration_count % 10 == 0:  # 10回に1回通知
+                    # エージェントの実行履歴から詳細情報を取得
+                    commands = self.agent.last_commands if hasattr(self.agent, 'last_commands') else []
+                    results = self.agent.last_results if hasattr(self.agent, 'last_results') else []
+                    thinking = self.agent.last_thinking if hasattr(self.agent, 'last_thinking') else ""
+                    
                     self.discord.send_execution_log(
                         iteration=self.agent.iteration_count,
                         goal=self.agent.current_goal,
-                        commands=[],
-                        results=[]
+                        commands=commands,
+                        results=results,
+                        thinking=thinking
+                    )
+                    self.line.send_execution_log(
+                        iteration=self.agent.iteration_count,
+                        goal=self.agent.current_goal,
+                        commands=commands,
+                        results=results
                     )
             
             return success
@@ -242,7 +301,7 @@ class IntegratedSystem:
         
         while self.running:
             try:
-                # イテレーション実行
+                # イテレーション実行（LINEコマンドチェックも含む）
                 self.run_iteration_with_monitoring()
                 
                 # 定期メンテナンス

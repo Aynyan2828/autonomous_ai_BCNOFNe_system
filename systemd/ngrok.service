@@ -1,0 +1,16 @@
+[Unit]
+Description=ngrok HTTP Tunnel for LINE Bot Webhook
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi
+ExecStart=/usr/local/bin/ngrok http 5000 --log=stdout
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

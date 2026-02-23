@@ -93,6 +93,12 @@ class AutonomousAgent:
         self.current_goal = "システムの状態を確認し、有益なタスクを見つける"
         self.iteration_count = 0
         self.last_execution_time = None
+        
+        # 実行履歴（通知用）
+        self.last_commands = []
+        self.last_results = []
+        self.last_thinking = ""
+        self.last_action = {}
     
     def log(self, message: str, level: str = "INFO"):
         """
@@ -335,8 +341,16 @@ class AutonomousAgent:
                 self.log("GPT呼び出しに失敗しました", "ERROR")
                 return False
             
+            # 実行履歴を保存（通知用）
+            self.last_action = action
+            self.last_thinking = action.get("say", "")
+            self.last_commands = action.get("cmd", [])
+            
             # アクション実行
             result = self.execute_action(action)
+            
+            # 実行結果を保存
+            self.last_results = result.get("cmd_results", [])
             
             # 実行結果をログ
             self.log(f"実行結果: {json.dumps(result, ensure_ascii=False, indent=2)}")

@@ -1,0 +1,14 @@
+# Allow pi user to control autonomous-ai.service without password
+# This file should be placed in /etc/sudoers.d/
+#
+# Installation:
+# sudo cp autonomous-ai-sudoers /etc/sudoers.d/autonomous-ai
+# sudo chmod 0440 /etc/sudoers.d/autonomous-ai
+#
+# Verify syntax before applying:
+# sudo visudo -c -f /etc/sudoers.d/autonomous-ai
+
+pi ALL=(ALL) NOPASSWD: /bin/systemctl start autonomous-ai.service
+pi ALL=(ALL) NOPASSWD: /bin/systemctl stop autonomous-ai.service
+pi ALL=(ALL) NOPASSWD: /bin/systemctl restart autonomous-ai.service
+pi ALL=(ALL) NOPASSWD: /bin/systemctl status autonomous-ai.service

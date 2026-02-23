@@ -7,6 +7,7 @@ LINE Botモジュール
 
 import os
 import json
+import subprocess
 from datetime import datetime
 from typing import Optional, Dict
 from pathlib import Path
@@ -287,8 +288,8 @@ API使用料が閾値に達しました
         """
         app = Flask(__name__)
         
-        @app.route("/callback", methods=['POST'])
-        def callback():
+        @app.route("/webhook", methods=['POST'])
+        def webhook():
             # 署名検証
             signature = request.headers['X-Line-Signature']
             body = request.get_data(as_text=True)
@@ -324,12 +325,35 @@ API使用料が閾値に達しました
                         TextSendMessage(text="⚠️ 確認IDが見つかりません")
                     )
             else:
-                # 通常のメッセージ（エージェントへの指示として処理）
-                self._save_user_command(text, event.source.user_id)
-                self.line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text="📝 指示を受け付けました")
-                )
+                # 特別なコマンドをチェック
+                if text in ["停止", "ストップ", "stop", "STOP"]:
+                    # AIエージェントを停止
+                    result = self._stop_ai_service()
+                    self.line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=result)
+                    )
+                elif text in ["再開", "起動", "start", "START", "スタート"]:
+                    # AIエージェントを起動
+                    result = self._start_ai_service()
+                    self.line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=result)
+                    )
+                elif text in ["状態", "ステータス", "status", "STATUS"]:
+                    # AIエージェントの状態を確認
+                    result = self._check_ai_service_status()
+                    self.line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=result)
+                    )
+                else:
+                    # 通常のメッセージ（エージェントへの指示として処理）
+                    self._save_user_command(text, event.source.user_id)
+                    self.line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text="📝 指示を受け付けました\n\n✅ 目標を設定しました:\n" + text)
+                    )
         
         return app
     
@@ -369,6 +393,76 @@ API使用料が閾値に達しました
                 "timestamp": datetime.now().isoformat()
             }, ensure_ascii=False) + "\n")
     
+    def _stop_ai_service(self) -> str:
+        """
+        AIエージェントサービスを停止
+        
+        Returns:
+            結果メッセージ
+        """
+        try:
+            result = subprocess.run(
+                ["sudo", "systemctl", "stop", "autonomous-ai.service"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                return "⏹️ AIエージェントを停止しました\n\n再開するには「再開」と送信してください。"
+            else:
+                return f"⚠️ 停止に失敗しました\n\nエラー: {result.stderr}"
+        except Exception as e:
+            return f"❌ エラーが発生しました: {str(e)}"
+    
+    def _start_ai_service(self) -> str:
+        """
+        AIエージェントサービスを起動
+        
+        Returns:
+            結果メッセージ
+        """
+        try:
+            result = subprocess.run(
+                ["sudo", "systemctl", "start", "autonomous-ai.service"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                return "🚀 AIエージェントを起動しました\n\n数秒後に動作を開始します。"
+            else:
+                return f"⚠️ 起動に失敗しました\n\nエラー: {result.stderr}"
+        except Exception as e:
+            return f"❌ エラーが発生しました: {str(e)}"
+    
+    def _check_ai_service_status(self) -> str:
+        """
+        AIエージェントサービスの状態を確認
+        
+        Returns:
+            状態メッセージ
+        """
+        try:
+            result = subprocess.run(
+                ["systemctl", "is-active", "autonomous-ai.service"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            status = result.stdout.strip()
+            
+            if status == "active":
+                return "✅ AIエージェント: 稼働中\n\n停止するには「停止」と送信してください。"
+            elif status == "inactive":
+                return "⏹️ AIエージェント: 停止中\n\n起動するには「再開」と送信してください。"
+            else:
+                return f"⚠️ AIエージェント: {status}\n\n詳細はログを確認してください。"
+        except Exception as e:
+            return f"❌ 状態確認エラー: {str(e)}"
+    
     def run_webhook_server(self, host: str = "0.0.0.0", port: int = 5000):
         """
         Webhookサーバーを起動
@@ -381,21 +475,14 @@ API使用料が閾値に達しました
         app.run(host=host, port=port)
 
 
-# テスト用
+# Webhookサーバー起動
 if __name__ == "__main__":
+    print("LINE Bot Webhookサーバーを起動します...")
+    print("ポート: 5000")
+    print("Ctrl+Cで停止")
+    
     # 環境変数から認証情報を取得
     bot = LINEBot()
     
-    # テスト送信
-    print("起動通知を送信...")
-    bot.send_startup_notification()
-    
-    print("実行ログを送信...")
-    bot.send_execution_log(
-        iteration=1,
-        goal="システムの状態確認",
-        commands=["ls -la", "df -h"],
-        results=[{"success": True}, {"success": True}]
-    )
-    
-    print("テスト完了")
+    # Webhookサーバー起動
+    bot.run_webhook_server(host="0.0.0.0", port=5000)

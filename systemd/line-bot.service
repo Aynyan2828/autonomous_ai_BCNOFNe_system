@@ -1,0 +1,19 @@
+[Unit]
+Description=LINE Bot Webhook Server
+After=network.target ngrok.service
+Wants=ngrok.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/autonomous_ai_BCNOFNe_system
+Environment="PATH=/home/pi/autonomous_ai_BCNOFNe_system/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStartPre=/bin/sleep 5
+ExecStart=/home/pi/autonomous_ai_BCNOFNe_system/venv/bin/python3 /home/pi/autonomous_ai_BCNOFNe_system/src/line_bot.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
