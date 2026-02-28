@@ -1,0 +1,86 @@
+# shipOS Audio Configuration
+# BCNOFNe 音声サブシステム設定
+
+# 入力デバイス（USBマクロパッド）
+input:
+  device_path: "/dev/input/event12"
+  # /dev/input/by-id/ で安定パスが使える場合はそちらを指定
+  # device_path_by_id: "/dev/input/by-id/usb-XXXX-event-kbd"
+  mode: "push_to_talk"   # "push_to_talk" or "toggle"
+
+# キー割り当て（evdevコード）
+keys:
+  talk: 183        # F13
+  monologue_mute: 184  # F14
+  status_read: 185     # F15
+  logbook: 186         # F16
+  emergency_stop: 187  # F17
+  volume_up: 115       # KEY_VOLUMEUP
+  volume_down: 114     # KEY_VOLUMEDOWN
+
+# STT（音声認識）
+stt:
+  engine: "whisper_cpp"    # "whisper_cpp" or "whisper_api"
+  whisper_cpp:
+    binary: "/home/pi/whisper.cpp/main"
+    model: "/home/pi/whisper.cpp/models/ggml-tiny.bin"
+    language: "ja"
+    threads: 4
+  whisper_api:
+    # フォールバック用（オフライン優先のため通常使わない）
+    model: "whisper-1"
+
+# TTS（音声合成）
+tts:
+  engine: "piper"         # "piper" or "openai_tts"
+  piper:
+    binary: "/home/pi/piper/piper"
+    model: "/home/pi/piper/ja_JP-takumi-medium.onnx"
+    config: "/home/pi/piper/ja_JP-takumi-medium.onnx.json"
+    speed: 1.0
+    speaker_id: 0
+  openai_tts:
+    # フォールバック用
+    model: "tts-1"
+    voice: "nova"
+
+# 録音設定
+recording:
+  format: "wav"
+  sample_rate: 16000
+  channels: 1
+  device: "default"     # ALSAデバイス名
+  max_duration: 30      # 最大録音秒数
+  silence_timeout: 3    # 無音タイムアウト
+
+# 音量設定
+volume:
+  conversation: 0.70
+  monologue: 0.25
+  monologue_night: 0.15    # 22:00〜06:00
+  notification: 0.50
+  emergency: 1.00
+  max_volume: 0.85
+  step: 0.05               # ノブ1クリック分
+
+# 独り言設定
+monologue:
+  min_interval_min: 7
+  max_interval_min: 25
+  quiet_hours_start: 22     # 夜間開始
+  quiet_hours_end: 6        # 夜間終了
+  enabled: true
+
+# 優先度（数字が小さいほど高優先）
+priority:
+  talk: 1
+  emergency: 2
+  notification: 3
+  monologue: 4
+
+# フェイルセーフ
+failsafe:
+  stt_fail_message: "聞き取れんかった、ごめんマスター"
+  tts_fail_silent: true     # TTS失敗時はログのみ
+  device_reconnect: true    # デバイス消失時に自動再接続
+  reconnect_interval: 5     # 再接続間隔（秒）

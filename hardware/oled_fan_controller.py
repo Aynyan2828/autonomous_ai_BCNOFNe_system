@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-OLED・ファン制御統合モジュール（改良版）
-- システム状態、AI状態をOLEDに表示し、ファンを温度連動で制御
-- 追加: 感情(Mood) を算出してOLEDに表示
-- 追加: 日記素材として mood_log.jsonl に状態ログを保存
+shipOS OLED・ファン制御統合モジュール
+- 航海用語ベースの5行表示
+- shipOSモードシステム連携
+- Mood算出（aynyan人格）
+- ファン温度連動制御
+- 日記素材として mood_log.jsonl 保存
 """
 
 import os
@@ -12,6 +14,7 @@ import json
 import time
 import logging
 import socket
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any
@@ -22,43 +25,68 @@ from oled_display import OLEDDisplay
 
 JST = timezone(timedelta(hours=9))
 
+
+# shipOS モード表示マッピング（航海用語）
+SHIP_MODE_DISPLAY = {
+    "autonomous":  "SAIL",    # 自律航海
+    "user_first":  "PORT",    # 入港待機
+    "maintenance": "DOCK",    # ドック入り
+    "power_save":  "ANCHOR",  # 停泊
+    "safe":        "SOS",     # 救難信号
+}
+
+SHIP_MODE_EMOJI = {
+    "autonomous":  "⛵",
+    "user_first":  "🏠",
+    "maintenance": "🔧",
+    "power_save":  "🌙",
+    "safe":        "🆘",
+}
+
+# AI状態 → 航海用語
+AI_STATE_DISPLAY = {
+    "Idle":          "WATCH",    # 見張り
+    "Planning":      "HELM",     # 操舵中
+    "Acting":        "ENGINE",   # 機関稼働
+    "Moving Files":  "CARGO",    # 積荷移動
+    "Error":         "ALARM",    # 警報
+    "Wait Approval": "SIGNAL",   # 信号待ち
+}
+
+
 @dataclass
 class Mood:
     score: int           # 0-100
     emoji: str           # 😊😗😨😤🥶🥵😎 etc
-    line: str            # 一言
+    line: str            # 一言（aynyan人格）
     reasons: Dict[str, Any]
 
 
 class OLEDFanController:
-    """OLED・ファン制御統合クラス"""
+    """shipOS OLED・ファン制御統合クラス"""
 
     # AI状態ファイル
     AI_STATE_FILE = "/var/run/ai_state.json"
 
-    # 追加：状態ログ（AI日記素材）
+    # shipOSモード状態ファイル
+    SHIP_MODE_FILE = "/home/pi/autonomous_ai/state/ship_mode.json"
+
+    # 状態ログ
     STATE_DIR = "/home/pi/autonomous_ai/state"
     MOOD_LOG_PATH = os.path.join(STATE_DIR, "mood_log.jsonl")
     LAST_TOUCH_PATH = os.path.join(STATE_DIR, "last_user_touch.txt")
 
     # 更新間隔
-    OLED_UPDATE_INTERVAL = 2.0   # 2秒
-    FAN_UPDATE_INTERVAL = 5.0    # 5秒
-    AI_STATE_CHECK_INTERVAL = 1.0  # 1秒
+    OLED_UPDATE_INTERVAL = 2.0
+    FAN_UPDATE_INTERVAL = 5.0
+    AI_STATE_CHECK_INTERVAL = 1.0
 
     def __init__(
         self,
         log_dir: str = "/home/pi/autonomous_ai/logs",
         enable_fan_warnings: bool = True
     ):
-        """
-        初期化
-
-        Args:
-            log_dir: ログディレクトリ
-            enable_fan_warnings: ファン高温警告を有効にするか
-        """
-        # ログ設定
+        """初期化"""
         os.makedirs(log_dir, exist_ok=True)
         os.makedirs(self.STATE_DIR, exist_ok=True)
 
@@ -88,19 +116,25 @@ class OLEDFanController:
         self.current_ai_state = "Idle"
         self.current_ai_task = ""
 
-        # 直近のmood（デバッグ/ログ用）
+        # shipOSモードキャッシュ
+        self.current_ship_mode = "autonomous"
+
+        # IP アドレスキャッシュ
+        self._ip_cache = "..."
+        self._ip_cache_time = 0.0
+
+        # Mood
         self.current_mood: Optional[Mood] = None
 
-        # 警告通知用（Discord/LINE連携）
+        # 警告通知コールバック
         self.warning_callback = None
 
-        self.logger.info("OLED・ファン制御システム（改良版）を初期化しました")
+        self.logger.info("shipOS OLED・ファン制御システムを初期化しました")
 
-    # -----------------------------
-    # 外部（LINE等）から「構った」を更新したい場合用
-    # -----------------------------
+    # ========== ユーザータッチ ==========
+
     def touch(self):
-        """ユーザーが構った時刻を保存（放置判定に使う）"""
+        """ユーザーが構った時刻を保存"""
         try:
             with open(self.LAST_TOUCH_PATH, "w", encoding="utf-8") as f:
                 f.write(str(time.time()))
@@ -116,40 +150,38 @@ class OLEDFanController:
         except Exception:
             return None
 
-    # -----------------------------
-    # 警告通知
-    # -----------------------------
-    def set_warning_callback(self, callback):
-        """
-        警告通知コールバックを設定
+    # ========== 警告コールバック ==========
 
-        Args:
-            callback: 警告通知関数 (temperature: float) -> None
-        """
+    def set_warning_callback(self, callback):
+        """警告通知コールバックを設定"""
         self.warning_callback = callback
 
-    # -----------------------------
-    # AI状態読み込み
-    # -----------------------------
-    def read_ai_state(self) -> dict:
-        """
-        AI状態ファイルを読み込み
+    # ========== AI状態 / shipOSモード読み込み ==========
 
-        Returns:
-            AI状態辞書
-        """
+    def read_ai_state(self) -> dict:
+        """AI状態ファイルを読み込み"""
         try:
             if os.path.exists(self.AI_STATE_FILE):
                 with open(self.AI_STATE_FILE, 'r', encoding='utf-8') as f:
                     return json.load(f)
             return {"state": "Idle", "task": "", "timestamp": ""}
-
         except Exception as e:
-            self.logger.error(f"AI状態ファイル読み込みエラー: {e}")
+            self.logger.error(f"AI状態読み込みエラー: {e}")
             return {"state": "Error", "task": "", "timestamp": ""}
 
+    def read_ship_mode(self) -> str:
+        """shipOSモードを読み込み"""
+        try:
+            if os.path.exists(self.SHIP_MODE_FILE):
+                with open(self.SHIP_MODE_FILE, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                return data.get("mode", "autonomous")
+        except Exception:
+            pass
+        return "autonomous"
+
     def update_ai_state(self):
-        """AI状態を更新"""
+        """AI状態とshipOSモードを更新"""
         current_time = time.time()
 
         if current_time - self.last_ai_state_check < self.AI_STATE_CHECK_INTERVAL:
@@ -160,21 +192,37 @@ class OLEDFanController:
         ai_data = self.read_ai_state()
         self.current_ai_state = ai_data.get("state", "Idle") or "Idle"
         self.current_ai_task = ai_data.get("task", "") or ""
+        self.current_ship_mode = self.read_ship_mode()
 
-    # -----------------------------
-    # ネット疎通
-    # -----------------------------
+    # ========== IP取得 ==========
+
+    def _get_ip(self) -> str:
+        """IPアドレスを取得（60秒キャッシュ）"""
+        if time.time() - self._ip_cache_time < 60:
+            return self._ip_cache
+        try:
+            result = subprocess.run(
+                ["hostname", "-I"],
+                capture_output=True, text=True, timeout=3
+            )
+            ips = result.stdout.strip().split()
+            self._ip_cache = ips[0] if ips else "NONE"
+        except Exception:
+            self._ip_cache = "ERR"
+        self._ip_cache_time = time.time()
+        return self._ip_cache
+
+    # ========== ネット疎通 ==========
+
     def _check_network(self, host: str = "1.1.1.1", port: int = 53, timeout: float = 0.7) -> bool:
-        """軽い疎通チェック（DNSへTCP接続）"""
         try:
             with socket.create_connection((host, port), timeout=timeout):
                 return True
         except Exception:
             return False
 
-    # -----------------------------
-    # Mood算出
-    # -----------------------------
+    # ========== Mood算出（aynyan人格） ==========
+
     def compute_mood(self, system_info: dict, ai_state: str) -> Mood:
         cpu_t = float(system_info.get("cpu_temp", 0.0))
         disk = float(system_info.get("disk_percent", 0.0))
@@ -231,30 +279,31 @@ class OLEDFanController:
 
         score = max(0, min(100, int(round(score))))
 
-        # 表情＆一言（九州ノリ）
+        # aynyan人格に合わせた表情＆一言
         if not net_ok:
-            emoji, line = "🥶", "通信きつか…孤独ばい"
+            emoji, line = "🥶", "通信きつか…マスター、孤独ばい"
         elif score >= 85:
-            emoji, line = "😎", "調子よか！任せんしゃい"
+            emoji, line = "😎", "調子よか！任せんしゃい♪"
         elif score >= 70:
-            emoji, line = "😊", "今日は穏やかばい"
+            emoji, line = "😊", "穏やかな航海ばい〜"
         elif score >= 55:
             emoji, line = "😗", "ちょい構ってほしか〜"
         elif score >= 35:
-            emoji, line = "😨", "なんか不安たい…"
+            emoji, line = "😨", "なんか不安たい…マスター"
         else:
             if cpu_t >= 70:
-                emoji, line = "🥵", "暑すぎ！冷やして〜"
+                emoji, line = "🥵", "アッツアツ！冷やして〜"
             else:
                 emoji, line = "😤", "だいぶキツか…助けて"
 
         return Mood(score=score, emoji=emoji, line=line, reasons=reasons)
 
     def _append_mood_log(self, system_info: dict, ai_state: str, ai_task: str, mood: Mood):
-        """JSONLで保存（AI日記素材）"""
+        """JSONLで保存（航海日誌素材）"""
         try:
             rec = {
                 "ts": datetime.now(JST).isoformat(timespec="seconds"),
+                "ship_mode": self.current_ship_mode,
                 "system": {
                     "cpu_temp": round(float(system_info.get("cpu_temp", 0.0)), 1),
                     "cpu_percent": round(float(system_info.get("cpu_percent", 0.0)), 1),
@@ -270,16 +319,10 @@ class OLEDFanController:
         except Exception as e:
             self.logger.debug(f"moodログ書き込み失敗: {e}")
 
-    # -----------------------------
-    # ファン制御
-    # -----------------------------
-    def update_fan(self) -> dict:
-        """
-        ファン制御を更新
+    # ========== ファン制御 ==========
 
-        Returns:
-            ファン状態
-        """
+    def update_fan(self) -> dict:
+        """ファン制御を更新"""
         current_time = time.time()
 
         if current_time - self.last_fan_update < self.FAN_UPDATE_INTERVAL:
@@ -298,16 +341,10 @@ class OLEDFanController:
 
         return fan_status
 
-    # -----------------------------
-    # OLED更新
-    # -----------------------------
-    def update_oled(self, fan_status: dict):
-        """
-        OLED表示を更新
+    # ========== OLED更新（航海用語5行表示） ==========
 
-        Args:
-            fan_status: ファン状態
-        """
+    def update_oled(self, fan_status: dict):
+        """OLED表示を航海用語ベースで更新"""
         current_time = time.time()
 
         if current_time - self.last_oled_update < self.OLED_UPDATE_INTERVAL:
@@ -315,59 +352,86 @@ class OLEDFanController:
 
         self.last_oled_update = current_time
 
-        # システム情報取得（既存OLEDDisplayを活用）
+        # システム情報取得
         system_info = self.oled_display.get_system_info()
-
-        # 追加：net_ok をここで付与（oled_display側が未対応でもOK）
         system_info["net_ok"] = self._check_network()
 
-        # ファン情報
-        fan_rpm = self.fan_controller.get_fan_rpm()
-        fan_status_text = fan_status.get("fan_status", "不明")
-
-        # 追加：mood算出 + ログ保存
+        # Mood算出
         mood = self.compute_mood(system_info, self.current_ai_state)
         self.current_mood = mood
         self._append_mood_log(system_info, self.current_ai_state, self.current_ai_task, mood)
 
-        # OLED表示（既存の display を"そのまま"使う）
-        # ただし既存displayは4行目が "AI:{ai_state}" の想定なので、
-        # ここで ai_state を「AI状態 + mood」を合成して渡す（oled_display.pyを触らずに実現）
-        ai_line = f"{self.current_ai_state} {mood.emoji}{mood.score:02d}"
+        # ===== 航海用語5行表示 =====
+        mode_disp = SHIP_MODE_DISPLAY.get(self.current_ship_mode, "SAIL")
+        mode_emoji = SHIP_MODE_EMOJI.get(self.current_ship_mode, "⛵")
+        ai_disp = AI_STATE_DISPLAY.get(self.current_ai_state, self.current_ai_state[:6])
+        ip = self._get_ip()
 
-        self.oled_display.display(
-            system_info=system_info,
-            fan_status=fan_status_text,
-            fan_rpm=fan_rpm,
-            ai_state=ai_line
-        )
+        # 目標の短縮表示
+        goal_short = self.current_ai_task[:13] if self.current_ai_task else "---"
 
-    # -----------------------------
-    # メインループ
-    # -----------------------------
+        # 5行構成:
+        #  1: shipOS: SAIL ⛵  (or PORT/DOCK/ANCHOR/SOS)
+        #  2: DEST: {目標短縮}
+        #  3: HELM: {AI状態} 😊85
+        #  4: TEMP: {温度}C FAN:{RPM}
+        #  5: IP: {address}
+
+        cpu_t = system_info.get("cpu_temp", 0)
+        disk_pct = system_info.get("disk_percent", 0)
+
+        line1 = f"shipOS:{mode_disp} {mode_emoji}"
+        line2 = f"DEST:{goal_short}"
+        line3 = f"HELM:{ai_disp} {mood.emoji}{mood.score:02d}"
+        line4 = f"TEMP:{cpu_t:.0f}C DISK:{disk_pct:.0f}%"
+        line5 = f"IP:{ip}"
+
+        # OLEDDisplayを使って表示（既存displayメソッドをバイパスして直接描画）
+        if self.oled_display.oled and self.oled_display.draw:
+            self.oled_display.draw.rectangle(
+                (0, 0, self.oled_display.WIDTH, self.oled_display.HEIGHT),
+                outline=0, fill=0
+            )
+            lines = [line1, line2, line3, line4, line5]
+            for i, line in enumerate(lines):
+                text = self.oled_display.format_line(line, 21)
+                self.oled_display.draw.text(
+                    (0, i * 12), text,
+                    font=self.oled_display.font, fill=255
+                )
+            self.oled_display.oled.image(self.oled_display.image)
+            self.oled_display.oled.show()
+        else:
+            # コンソール出力（開発環境用）
+            print("\n" + "=" * 30)
+            for l in [line1, line2, line3, line4, line5]:
+                print(f"  {l}")
+            print("=" * 30)
+
+    # ========== メインループ ==========
+
     def run(self):
         """メインループ"""
-        self.logger.info("OLED・ファン制御システム（改良版）を開始します")
+        self.logger.info("shipOS OLED・ファン制御システムを開始します")
 
-        # 起動メッセージ
-        self.oled_display.show_message("Autonomous AI\nSystem\nStarting...", 2.0)
+        # 出港テロップ
+        self.oled_display.show_message("shipOS BCNOFNe\nSetting Sail...", 2.0)
 
         try:
             fan_status = {}
 
             while True:
-                # AI状態更新
+                # AI状態 + モード更新
                 self.update_ai_state()
 
-                # ファン制御更新
+                # ファン制御
                 new_fan_status = self.update_fan()
                 if new_fan_status:
                     fan_status = new_fan_status
 
-                # OLED表示更新
+                # OLED表示更新（航海用語5行）
                 self.update_oled(fan_status)
 
-                # 短いスリープ（CPU負荷軽減）
                 time.sleep(0.5)
 
         except KeyboardInterrupt:
@@ -381,30 +445,22 @@ class OLEDFanController:
 
     def cleanup(self):
         """クリーンアップ"""
-        self.logger.info("クリーンアップ中...")
-        self.oled_display.show_message("System\nShutting Down...", 1.0)
+        self.logger.info("投錨。全機関停止...")
+        self.oled_display.show_message("Anchored.\nAll Stop.", 1.0)
         self.oled_display.clear()
         self.fan_controller.cleanup()
         self.logger.info("クリーンアップ完了")
 
 
 def warning_notification(temperature: float):
-    """高温警告通知（Discord/LINE連携用）
-
-    Args:
-        temperature: CPU温度
-    """
-    print(f"🔥 警告: CPU温度が {temperature:.1f}°C に達しました")
+    """高温警告通知"""
+    print(f"🥵 機関温度警報: {temperature:.1f}°C！冷却が必要です")
 
 
 def main():
     """メイン関数"""
     controller = OLEDFanController()
-
-    # 警告通知コールバック設定
     controller.set_warning_callback(warning_notification)
-
-    # 実行
     controller.run()
 
 

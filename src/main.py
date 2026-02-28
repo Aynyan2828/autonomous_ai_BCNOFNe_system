@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-完全自律型AIシステム メインプログラム
-全モジュールを統合して実行
+shipOS BCNOFNe メインプログラム
+自律AIシステム統合制御
 
-v3.0: イベントインボックス、Fast Response Mode、LINE通知分離、
-      目標管理優先度制御を導入
+v4.0: shipOS進化 - モードシステム、カレンダー連携、ヘルスモニタ、
+      航海日誌、自己修復、音声IF、航海用語演出
 """
 
 import os
@@ -42,8 +42,25 @@ from storage_manager import StorageManager
 from billing_guard import BillingGuard
 from startup_flag import StartupFlag
 from quick_responder import QuickResponder
+from ship_mode import ShipMode
+from ship_narrator import ShipNarrator
+from ships_log import ShipsLog
+from health_monitor import HealthMonitor
+from failsafe import FailSafe
 
-# OLEDはオプショナル（ラズパイ環境のみ）
+# オプショナルモジュール
+try:
+    from calendar_sync import CalendarSync
+    CALENDAR_AVAILABLE = True
+except ImportError:
+    CALENDAR_AVAILABLE = False
+
+try:
+    from task_scheduler import TaskScheduler
+    SCHEDULER_AVAILABLE = True
+except ImportError:
+    SCHEDULER_AVAILABLE = False
+
 try:
     from oled_status import OLEDStatus
     OLED_ENABLED = True
@@ -92,6 +109,26 @@ class IntegratedSystem:
         
         self.browser = None  # 必要時に起動
         
+        # === shipOS モジュール ===
+        self.ship_mode = ShipMode()
+        self.narrator = ShipNarrator
+        self.ships_log = ShipsLog()
+        self.health = HealthMonitor()
+        self.failsafe = FailSafe()
+        
+        # カレンダー連携（オプショナル）
+        self.calendar = None
+        self.scheduler = None
+        if CALENDAR_AVAILABLE and os.getenv("CALENDAR_ICS_URL"):
+            try:
+                self.calendar = CalendarSync()
+                if SCHEDULER_AVAILABLE:
+                    self.scheduler = TaskScheduler(self.calendar, self.ship_mode)
+                    self._register_periodic_tasks()
+                print("カレンダー連携を初期化しました")
+            except Exception as e:
+                print(f"カレンダー初期化スキップ: {e}")
+        
         # OLEDステータス表示（オプショナル）
         self.oled = None
         if OLED_ENABLED:
@@ -110,8 +147,47 @@ class IntegratedSystem:
     
     def handle_shutdown(self, signum, frame):
         """シャットダウンハンドラ"""
-        print("\nシャットダウンシグナルを受信しました")
+        print("\n" + self.narrator.narrate("shutdown"))
         self.running = False
+    
+    def _register_periodic_tasks(self):
+        """定期タスクをスケジューラに登録"""
+        if not self.scheduler:
+            return
+        
+        # HDD整理: 毎日1回（自律モード時のみ）
+        self.scheduler.register(
+            "HDD整理", 
+            lambda: self.storage.archive_old_files(dry_run=False),
+            interval_sec=86400,
+            run_in_modes=["autonomous", "maintenance"]
+        )
+        
+        # SSD80%チェック: 1時間ごと
+        def check_ssd():
+            import psutil
+            usage = psutil.disk_usage("/")
+            if usage.percent >= 80:
+                result = self.storage.archive_old_files(dry_run=False)
+                return f"SSD{usage.percent:.0f}% → {result['moved_files']}件移動"
+            return f"SSD{usage.percent:.0f}% 正常"
+        
+        self.scheduler.register("SSD監視", check_ssd, interval_sec=3600)
+        
+        # ヘルスチェック: 5分ごと
+        self.scheduler.register(
+            "ヘルスチェック",
+            lambda: self.health.run_all_checks(),
+            interval_sec=300
+        )
+        
+        # 自己修復: 10分ごと
+        self.scheduler.register(
+            "自己修復チェック",
+            lambda: self.failsafe.check_and_recover(),
+            interval_sec=600,
+            run_in_modes=["autonomous", "maintenance", "safe"]
+        )
     
     def send_startup_notifications(self):
         """起動通知を送信（重複防止付き）"""
@@ -379,7 +455,7 @@ class IntegratedSystem:
     def run(self):
         """メインループ"""
         print("=" * 60)
-        print("完全自律型AIシステム 起動")
+        print(self.narrator.startup_message())
         print("=" * 60)
         
         # OLED起動テロップ + 自己診断
@@ -416,14 +492,45 @@ class IntegratedSystem:
                         task=f"iter#{self.agent.iteration_count}"
                     )
                 
+                # スケジューラ（カレンダーモード切替 + 定期タスク）
+                if self.scheduler:
+                    mode_result = self.scheduler.check_calendar_mode()
+                    if mode_result and mode_result.get("success"):
+                        msg = self.narrator.mode_switch_message(
+                            mode_result["old_mode"], mode_result["new_mode"],
+                            mode_result.get("reason", "")
+                        )
+                        self.discord.send_message(msg)
+                        self.line.send_status(msg[:100])
+                        self.ships_log.record_action("mode_switch", msg)
+                    
+                    task_results = self.scheduler.run_due_tasks(self.ship_mode.current_mode)
+                    for tr in task_results:
+                        self.ships_log.record_action(
+                            "scheduled_task", tr["name"], tr["success"]
+                        )
+                
+                # ヘルスモニタ（ハートビート更新）
+                self.health.update_heartbeat()
+                
+                # 航海日誌記録
+                self.ships_log.record_action(
+                    "iteration", f"iter#{self.agent.iteration_count}",
+                    success=True
+                )
+                
                 # 定期メンテナンス
                 if time.time() - last_maintenance > maintenance_interval:
                     self.run_maintenance()
                     last_maintenance = time.time()
                 
+                # モード連動イテレーション間隔
+                mode_config = self.ship_mode.get_config()
+                wait_sec = mode_config.get("iteration_interval", iteration_interval)
+                
                 # 待機
                 if self.running:
-                    time.sleep(iteration_interval)
+                    time.sleep(wait_sec)
                 
             except KeyboardInterrupt:
                 print("\nユーザーによる中断")
@@ -440,7 +547,7 @@ class IntegratedSystem:
     
     def shutdown(self):
         """シャットダウン処理"""
-        print("システムをシャットダウン中...")
+        print(self.narrator.shutdown_message())
         
         # 停止通知
         self.send_shutdown_notifications()

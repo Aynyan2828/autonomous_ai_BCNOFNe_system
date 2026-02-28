@@ -395,6 +395,55 @@ API使用料が閾値に達しました
                         event.reply_token,
                         TextSendMessage(text="📊 LINE実行ログを無効にしました。")
                     )
+                
+                # === shipOS コマンド ===
+                elif text.lower().startswith("mode ") or text.startswith("モード "):
+                    mode_name = text.split(" ", 1)[1].strip().lower()
+                    mode_map = {
+                        "自律": "autonomous", "航海": "autonomous", "sail": "autonomous",
+                        "ユーザー": "user_first", "入港": "user_first", "port": "user_first",
+                        "メンテ": "maintenance", "ドック": "maintenance", "dock": "maintenance",
+                        "省電力": "power_save", "停泊": "power_save", "anchor": "power_save",
+                        "セーフ": "safe", "救難": "safe", "sos": "safe",
+                    }
+                    resolved = mode_map.get(mode_name, mode_name)
+                    valid_modes = ["autonomous", "user_first", "maintenance", "power_save", "safe"]
+                    if resolved in valid_modes:
+                        result = self._switch_ship_mode(resolved, "LINE手動切替")
+                        self.line_bot_api.reply_message(
+                            event.reply_token, TextSendMessage(text=result))
+                    else:
+                        self.line_bot_api.reply_message(
+                            event.reply_token,
+                            TextSendMessage(text=f"⚠️ 不明なモード: {mode_name}\n有効: autonomous/user_first/maintenance/power_save/safe"))
+                
+                elif text in ["ヘルス", "health", "健康"]:
+                    result = self._get_health_summary()
+                    self.line_bot_api.reply_message(
+                        event.reply_token, TextSendMessage(text=result))
+                
+                elif text in ["航海日誌", "日誌", "logbook"]:
+                    result = self._get_daily_log()
+                    self.line_bot_api.reply_message(
+                        event.reply_token, TextSendMessage(text=result))
+                
+                elif text in ["今日なにした", "今日何した", "today"]:
+                    result = self._what_did_i_do()
+                    self.line_bot_api.reply_message(
+                        event.reply_token, TextSendMessage(text=result))
+                
+                elif text in ["モード", "mode"]:
+                    mode_data = self._read_current_mode()
+                    mode_names = {
+                        "autonomous": "⛵ 自律航海", "user_first": "🏠 入港待機",
+                        "maintenance": "🔧 ドック入り", "power_save": "🌙 停泊", "safe": "🆘 救難信号"}
+                    name = mode_names.get(mode_data.get("mode", ""), mode_data.get("mode", ""))
+                    since = mode_data.get("since", "")[:19]
+                    override = "（手動オーバーライド中）" if mode_data.get("override") else ""
+                    self.line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=f"現在のモード: {name}\n開始: {since}\n{override}"))
+                
                 else:
                     # 入力種別を判定
                     event_type = self._classify_input(text)
@@ -596,6 +645,125 @@ API使用料が閾値に達しました
         """
         app = self.create_webhook_app()
         app.run(host=host, port=port)
+    
+    # === shipOS 連携メソッド ===
+    
+    SHIP_MODE_FILE = "/home/pi/autonomous_ai/state/ship_mode.json"
+    MODE_HISTORY_FILE = "/home/pi/autonomous_ai/state/mode_history.jsonl"
+    HEALTH_HISTORY_FILE = "/home/pi/autonomous_ai/state/health_history.jsonl"
+    SHIPS_LOG_DIR = "/home/pi/autonomous_ai/state/ships_log"
+    
+    def _read_current_mode(self) -> dict:
+        """現在のモード状態を読み取り"""
+        try:
+            if os.path.exists(self.SHIP_MODE_FILE):
+                with open(self.SHIP_MODE_FILE, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return {"mode": "autonomous", "since": "", "override": False}
+    
+    def _switch_ship_mode(self, mode: str, reason: str = "") -> str:
+        """モードを切り替えて結果メッセージを返す"""
+        import os
+        mode_names = {
+            "autonomous": "⛵ 自律航海", "user_first": "🏠 入港待機",
+            "maintenance": "🔧 ドック入り", "power_save": "🌙 停泊", "safe": "🆘 救難信号"
+        }
+        try:
+            old_data = self._read_current_mode()
+            old_mode = old_data.get("mode", "autonomous")
+            
+            new_state = {
+                "mode": mode,
+                "since": datetime.now().isoformat(),
+                "override": True,
+                "override_until": None,
+                "updated": datetime.now().isoformat()
+            }
+            os.makedirs(os.path.dirname(self.SHIP_MODE_FILE), exist_ok=True)
+            with open(self.SHIP_MODE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(new_state, f, ensure_ascii=False, indent=2)
+            
+            # 履歴記録
+            try:
+                with open(self.MODE_HISTORY_FILE, 'a', encoding='utf-8') as f:
+                    f.write(json.dumps({
+                        "from": old_mode, "to": mode, "reason": reason,
+                        "source": "line", "timestamp": datetime.now().isoformat()
+                    }, ensure_ascii=False) + "\n")
+            except Exception:
+                pass
+            
+            old_name = mode_names.get(old_mode, old_mode)
+            new_name = mode_names.get(mode, mode)
+            return f"🔄 モード切替完了\n{old_name} → {new_name}\n理由: {reason}"
+        except Exception as e:
+            return f"❌ モード切替失敗: {e}"
+    
+    def _get_health_summary(self) -> str:
+        """最新ヘルスチェック結果をテキストで返す"""
+        try:
+            if os.path.exists(self.HEALTH_HISTORY_FILE):
+                with open(self.HEALTH_HISTORY_FILE, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                if lines:
+                    h = json.loads(lines[-1].strip())
+                    ts = h.get("timestamp", "")[:19]
+                    result = [f"🏥 ヘルス状態 ({ts})"]
+                    for c in h.get("checks", []):
+                        icon = {"OK": "🟢", "WARN": "🟡", "CRITICAL": "🔴"}.get(c.get("status", ""), "⚪")
+                        result.append(f"{icon} {c.get('name', '')}: {c.get('message', '')}")
+                    return "\n".join(result)
+        except Exception as e:
+            return f"❌ ヘルス取得エラー: {e}"
+        return "ヘルスデータなし"
+    
+    def _get_daily_log(self) -> str:
+        """今日の航海日誌サマリーを返す"""
+        try:
+            today_file = os.path.join(
+                self.SHIPS_LOG_DIR, f"{datetime.now().strftime('%Y%m%d')}.jsonl"
+            )
+            if os.path.exists(today_file):
+                with open(today_file, 'r', encoding='utf-8') as f:
+                    entries = [json.loads(l.strip()) for l in f if l.strip()]
+                if entries:
+                    total = len(entries)
+                    success = sum(1 for e in entries if e.get("success", True))
+                    rate = round(success / total * 100, 1) if total else 0
+                    return (
+                        f"📔 航海日誌 {datetime.now().strftime('%Y/%m/%d')}\n"
+                        f"行動回数: {total}回\n"
+                        f"成功率: {rate}%\n"
+                        f"最新: {entries[-1].get('type', '')}: {entries[-1].get('detail', '')[:40]}"
+                    )
+        except Exception as e:
+            return f"❌ 航海日誌エラー: {e}"
+        return "本日のエントリなし"
+    
+    def _what_did_i_do(self) -> str:
+        """「今日なにした？」への回答"""
+        try:
+            today_file = os.path.join(
+                self.SHIPS_LOG_DIR, f"{datetime.now().strftime('%Y%m%d')}.jsonl"
+            )
+            if os.path.exists(today_file):
+                with open(today_file, 'r', encoding='utf-8') as f:
+                    entries = [json.loads(l.strip()) for l in f if l.strip()]
+                if entries:
+                    total = len(entries)
+                    success = sum(1 for e in entries if e.get("success", True))
+                    rate = round(success / total * 100, 1) if total else 0
+                    recent = entries[-3:]
+                    recent_str = "、".join(e.get("detail", "")[:20] for e in recent)
+                    return (
+                        f"今日は{total}回動いたよ！成功率は{rate}%。\n"
+                        f"最近: {recent_str}"
+                    )
+        except Exception:
+            pass
+        return "今日はまだ何もしてないよ。のんびり航海中〜"
 
 
 # Webhookサーバー起動

@@ -1,0 +1,19 @@
+[Unit]
+Description=shipOS Watchdog (FailSafe)
+After=autonomous-ai.service
+Wants=autonomous-ai.service
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/autonomous_ai/src
+ExecStart=/usr/bin/python3 /home/pi/autonomous_ai/src/failsafe.py --watchdog --interval 60
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=shipos-watchdog
+
+[Install]
+WantedBy=multi-user.target
