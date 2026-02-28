@@ -3,6 +3,9 @@
 """
 完全自律型AIシステム メインプログラム
 全モジュールを統合して実行
+
+v3.0: イベントインボックス、Fast Response Mode、LINE通知分離、
+      目標管理優先度制御を導入
 """
 
 import os
@@ -38,6 +41,14 @@ from browser_controller import BrowserController
 from storage_manager import StorageManager
 from billing_guard import BillingGuard
 from startup_flag import StartupFlag
+from quick_responder import QuickResponder
+
+# OLEDはオプショナル（ラズパイ環境のみ）
+try:
+    from oled_status import OLEDStatus
+    OLED_ENABLED = True
+except ImportError:
+    OLED_ENABLED = False
 
 
 class IntegratedSystem:
@@ -74,7 +85,21 @@ class IntegratedSystem:
             data_dir="/home/pi/autonomous_ai/billing"
         )
         
+        # Quick Responder（質問即時回答用）
+        self.quick_responder = QuickResponder(
+            api_key=os.getenv("OPENAI_API_KEY")
+        )
+        
         self.browser = None  # 必要時に起動
+        
+        # OLEDステータス表示（オプショナル）
+        self.oled = None
+        if OLED_ENABLED:
+            try:
+                self.oled = OLEDStatus()
+                print("OLEDステータス表示を初期化しました")
+            except Exception as e:
+                print(f"OLED初期化スキップ: {e}")
         
         # シグナルハンドラ設定
         signal.signal(signal.SIGTERM, self.handle_shutdown)
@@ -102,7 +127,7 @@ class IntegratedSystem:
         # Discord通知
         self.discord.send_startup_notification()
         
-        # LINE通知
+        # LINE通知（起動通知は重要なので送信）
         self.line.send_startup_notification()
         
         # 課金サマリーも送信
@@ -117,44 +142,95 @@ class IntegratedSystem:
         # Discord通知
         self.discord.send_shutdown_notification(reason)
         
-        # LINE通知
+        # LINE通知（停止通知は重要なので送信）
         self.line.send_shutdown_notification(reason)
     
-    def check_line_commands(self):
+    def process_inbox(self):
         """
-        LINEからのコマンドをチェック
+        イベントインボックスを処理
+        - query → QuickResponder で即時回答
+        - goal → agent.update_goal() で目標更新
+        - 後方互換: user_commands.jsonl もサポート
         """
-        command_file = "/home/pi/autonomous_ai/commands/user_commands.jsonl"
+        # === 新形式: inbox.jsonl ===
+        inbox_file = "/home/pi/autonomous_ai/commands/inbox.jsonl"
         
-        if not os.path.exists(command_file):
+        if os.path.exists(inbox_file):
+            try:
+                with open(inbox_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                
+                if lines:
+                    for line in lines:
+                        try:
+                            event = json.loads(line.strip())
+                            self._handle_event(event)
+                        except json.JSONDecodeError:
+                            continue
+                    
+                    # 処理済みのインボックスを削除（履歴は残る）
+                    os.remove(inbox_file)
+                    
+            except Exception as e:
+                self.agent.log(f"インボックス処理エラー: {e}", "ERROR")
+        
+        # === 後方互換: user_commands.jsonl ===
+        legacy_file = "/home/pi/autonomous_ai/commands/user_commands.jsonl"
+        
+        if os.path.exists(legacy_file):
+            try:
+                with open(legacy_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                
+                if lines:
+                    last_command = json.loads(lines[-1])
+                    command_text = last_command.get("command", "")
+                    
+                    if command_text:
+                        # 旧形式は全てgoal扱い
+                        self.agent.update_goal(command_text, source="user")
+                        self.agent.log(f"レガシーコマンドを受信: {command_text}", "INFO")
+                        self.line.send_status(f"✅ 目標を設定しました:\n{command_text}")
+                        self.discord.send_message(f"📨 LINEから新しい目標を受信:\n{command_text}")
+                    
+                    os.remove(legacy_file)
+                    
+            except Exception as e:
+                self.agent.log(f"レガシーコマンド読み取りエラー: {e}", "ERROR")
+    
+    def _handle_event(self, event: dict):
+        """
+        個別イベントを処理
+        
+        Args:
+            event: イベントデータ {type, text, user_id, timestamp}
+        """
+        event_type = event.get("type", "goal")
+        text = event.get("text", "")
+        
+        if not text:
             return
         
-        try:
-            # 未読コマンドを読み込み
-            with open(command_file, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
+        if event_type == "query":
+            # === 質問 → QuickResponder で即時回答 ===
+            self.agent.log(f"USER_QUERY受信: {text}", "INFO")
+            self.line.send_status("🧠 思考中...")
             
-            if not lines:
-                return
-            
-            # 最後のコマンドを取得
-            last_command = json.loads(lines[-1])
-            command_text = last_command.get("command", "")
-            
-            if command_text:
-                # 目標を更新
-                self.agent.current_goal = command_text
-                self.agent.log(f"LINEコマンドを受信: {command_text}", "INFO")
-                
-                # コマンドファイルをクリア
-                os.remove(command_file)
-                
-                # 確認通知
-                self.line.send_message(f"✅ 目標を設定しました:\n{command_text}")
-                self.discord.send_message(f"📨 LINEから新しい目標を受信:\n{command_text}")
+            try:
+                answer = self.quick_responder.respond(text)
+                self.line.send_message(f"💬 {answer}")
+                self.agent.log(f"質問回答完了: {text[:30]}...", "INFO")
+                self.discord.send_message(f"📨 質問応答:\nQ: {text}\nA: {answer[:200]}")
+            except Exception as e:
+                self.agent.log(f"質問回答エラー: {e}", "ERROR")
+                self.line.send_message("⚠️ 回答の生成中にエラーが発生しました。")
         
-        except Exception as e:
-            self.agent.log(f"LINEコマンド読み取りエラー: {e}", "ERROR")
+        elif event_type == "goal":
+            # === 目標 → エージェントの目標を更新 ===
+            self.agent.log(f"USER_GOAL受信: {text}", "INFO")
+            self.agent.update_goal(text, source="user")
+            self.line.send_status(f"✅ 目標を設定しました:\n{text}")
+            self.discord.send_message(f"📨 LINEから新しい目標を受信:\n{text}")
     
     def run_iteration_with_monitoring(self) -> bool:
         """
@@ -164,8 +240,9 @@ class IntegratedSystem:
             成功したらTrue
         """
         try:
-            # LINEコマンドチェック
-            self.check_line_commands()
+            # イベントインボックス処理
+            self.process_inbox()
+            
             # 課金チェック
             alert = self.billing.check_threshold()
             
@@ -177,6 +254,7 @@ class IntegratedSystem:
                         alert["threshold"],
                         "停止"
                     )
+                    # 重大エラー → LINEにも送信
                     self.line.send_cost_alert(
                         alert["today_cost"],
                         alert["threshold"],
@@ -194,6 +272,7 @@ class IntegratedSystem:
                         alert["threshold"],
                         "警告"
                     )
+                    # 重大 → LINEにも送信
                     self.line.send_cost_alert(
                         alert["today_cost"],
                         alert["threshold"],
@@ -201,13 +280,8 @@ class IntegratedSystem:
                     )
                 
                 elif alert["level"] == "warning":
-                    # 注意通知
+                    # 注意通知（Discordのみ）
                     self.discord.send_cost_alert(
-                        alert["today_cost"],
-                        alert["threshold"],
-                        "注意"
-                    )
-                    self.line.send_cost_alert(
                         alert["today_cost"],
                         alert["threshold"],
                         "注意"
@@ -217,20 +291,20 @@ class IntegratedSystem:
             success = self.agent.run_iteration()
             
             if success:
-                # 使用量を記録（簡易版、実際のトークン数は別途取得が必要）
+                # 使用量を記録
                 self.billing.record_usage(
                     model="gpt-4.1-mini",
-                    input_tokens=1500,  # 推定値
-                    output_tokens=500   # 推定値
+                    input_tokens=1500,
+                    output_tokens=500
                 )
                 
-                # Discord/LINE通知
-                if self.agent.iteration_count % 10 == 0:  # 10回に1回通知
-                    # エージェントの実行履歴から詳細情報を取得
+                # Discord通知（従来通り10回に1回）
+                if self.agent.iteration_count % 10 == 0:
                     commands = self.agent.last_commands if hasattr(self.agent, 'last_commands') else []
                     results = self.agent.last_results if hasattr(self.agent, 'last_results') else []
                     thinking = self.agent.last_thinking if hasattr(self.agent, 'last_thinking') else ""
                     
+                    # Discordは常に詳細ログを送信
                     self.discord.send_execution_log(
                         iteration=self.agent.iteration_count,
                         goal=self.agent.current_goal,
@@ -238,20 +312,25 @@ class IntegratedSystem:
                         results=results,
                         thinking=thinking
                     )
-                    self.line.send_execution_log(
-                        iteration=self.agent.iteration_count,
-                        goal=self.agent.current_goal,
-                        commands=commands,
-                        results=results
-                    )
+                    
+                    # LINEは is_exec_log_enabled() がTrueの場合のみ
+                    if self.line.is_exec_log_enabled():
+                        self.line.send_execution_log(
+                            iteration=self.agent.iteration_count,
+                            goal=self.agent.current_goal,
+                            commands=commands,
+                            results=results
+                        )
             
             return success
             
         except Exception as e:
             self.agent.log(f"イテレーション実行エラー: {e}", "ERROR")
             
-            # エラー通知
+            # エラー通知（Discordは常に）
             self.discord.send_error_notification(str(e))
+            
+            # 重大エラーのみLINEに通知
             self.line.send_error_notification(str(e))
             
             return False
@@ -259,37 +338,62 @@ class IntegratedSystem:
     def run_maintenance(self):
         """定期メンテナンス"""
         print("定期メンテナンスを実行中...")
+        self.line.send_status("🔧 定期メンテナンス実行中...")
         
         # ストレージチェック
         alert = self.storage.monitor_storage(threshold_percent=80.0)
         if alert:
             self.agent.log(alert["message"], "WARNING")
             self.discord.send_message(f"⚠️ {alert['message']}")
-            self.line.send_message(f"⚠️ {alert['message']}")
+            # ストレージ逼迫は重大 → LINEにも通知
+            self.line.send_status(f"⚠️ {alert['message']}")
             
             # 自動アーカイブ
             result = self.storage.archive_old_files(dry_run=False)
             if result["moved_files"] > 0:
                 msg = f"古いファイルを{result['moved_files']}個アーカイブしました"
                 self.agent.log(msg, "INFO")
-                self.discord.send_message(f"📦 {msg}")
+                # Discordには詳細
+                self.discord.send_message(
+                    f"📦 {msg}\n"
+                    f"対象ファイル: {result['total_files']}個\n"
+                    f"移動成功: {result['moved_files']}個\n"
+                    f"失敗: {result['failed_files']}個\n"
+                    f"合計サイズ: {result['total_size'] / (1024**2):.2f} MB"
+                )
+                # LINEには短いサマリー
+                self.line.send_status(f"📦 {msg}")
         
         # 一時ファイル削除
         deleted = self.storage.cleanup_temp_files()
         if deleted > 0:
             self.agent.log(f"一時ファイルを{deleted}個削除しました", "INFO")
         
-        # メモリサマリー送信
-        if self.agent.iteration_count % 50 == 0:  # 50回に1回
+        # メモリサマリー送信（Discordのみ）
+        if self.agent.iteration_count % 50 == 0:
             summary = self.agent.memory.get_summary()
             self.discord.send_memory_summary(summary)
-            self.line.send_memory_summary(summary)
+        
+        self.line.send_status("✅ メンテナンス完了")
     
     def run(self):
         """メインループ"""
         print("=" * 60)
         print("完全自律型AIシステム 起動")
         print("=" * 60)
+        
+        # OLED起動テロップ + 自己診断
+        if self.oled:
+            self.oled.show_startup_telop()
+            diag_results = self.oled.run_diagnostics()
+            # 診断結果をログ
+            for item, ok in diag_results.items():
+                status = "✅ OK" if ok else "❌ FAIL"
+                self.agent.log(f"自己診断 [{item}]: {status}", "INFO")
+                if not ok:
+                    # 重大問題はLINEに通知
+                    self.line.send_status(f"⚠️ 起動診断失敗: {item}")
+            self.oled.set_running()
         
         # 起動通知
         self.send_startup_notifications()
@@ -301,8 +405,16 @@ class IntegratedSystem:
         
         while self.running:
             try:
-                # イテレーション実行（LINEコマンドチェックも含む）
+                # イテレーション実行（インボックス処理も含む）
                 self.run_iteration_with_monitoring()
+                
+                # OLED更新
+                if self.oled:
+                    self.oled.update_display(
+                        goal=self.agent.current_goal,
+                        state=getattr(self.agent, 'last_thinking', '')[:20] or "IDLE",
+                        task=f"iter#{self.agent.iteration_count}"
+                    )
                 
                 # 定期メンテナンス
                 if time.time() - last_maintenance > maintenance_interval:
@@ -319,6 +431,7 @@ class IntegratedSystem:
             except Exception as e:
                 self.agent.log(f"予期しないエラー: {e}", "ERROR")
                 self.discord.send_error_notification(str(e), str(e))
+                # 重大エラー → LINEにも通知
                 self.line.send_error_notification(str(e))
                 time.sleep(iteration_interval)
         
@@ -335,6 +448,10 @@ class IntegratedSystem:
         # ブラウザ停止
         if self.browser:
             self.browser.stop()
+        
+        # OLEDシャットダウン
+        if self.oled:
+            self.oled.show_shutdown()
         
         # 最終メモリ保存
         self.agent.memory.append_diary("システム停止")

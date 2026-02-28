@@ -1,0 +1,26 @@
+[Unit]
+Description=Autonomous AI GUI (Streamlit)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/autonomous_ai/src
+EnvironmentFile=/home/pi/autonomous_ai/.env
+
+# Streamlit GUI起動
+ExecStart=/usr/bin/python3 -m streamlit run /home/pi/autonomous_ai/src/gui_app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
+
+# 自動再起動
+Restart=on-failure
+RestartSec=10
+
+# 標準出力
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=autonomous-ai-gui
+
+[Install]
+WantedBy=multi-user.target

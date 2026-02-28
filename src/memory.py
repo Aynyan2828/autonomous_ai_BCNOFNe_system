@@ -34,6 +34,42 @@ class MemoryManager:
         # インデックスの初期化
         self.index = self._load_index()
     
+    def _atomic_write(self, path, content: str) -> bool:
+        """
+        Atomic write: tmpに書いてrenameで置換することで0バイトファイルを防止
+        
+        Args:
+            path: 書き込み先パス
+            content: 書き込み内容
+            
+        Returns:
+            成功したらTrue
+        """
+        import tempfile
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            fd, tmp_path = tempfile.mkstemp(
+                dir=str(target.parent),
+                suffix='.tmp'
+            )
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            # 0バイト検証
+            if os.path.getsize(tmp_path) == 0:
+                os.remove(tmp_path)
+                print(f"警告: 0バイトファイルを検出、書き込みを中止: {path}")
+                return False
+            
+            os.replace(tmp_path, str(target))
+            return True
+        except Exception as e:
+            print(f"Atomic writeエラー: {e}")
+            if 'tmp_path' in locals() and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            return False
+    
     def _load_index(self) -> Dict:
         """インデックスファイルを読み込む"""
         if self.index_path.exists():
@@ -42,9 +78,9 @@ class MemoryManager:
         return {"topics": {}, "total_memories": 0}
     
     def _save_index(self):
-        """インデックスファイルを保存"""
-        with open(self.index_path, 'w', encoding='utf-8') as f:
-            json.dump(self.index, f, ensure_ascii=False, indent=2)
+        """インデックスファイルを保存（atomic write）"""
+        content = json.dumps(self.index, ensure_ascii=False, indent=2)
+        self._atomic_write(self.index_path, content)
     
     def write_memory(self, filename: str, content: str) -> bool:
         """
@@ -64,9 +100,10 @@ class MemoryManager:
             # ファイルパス
             file_path = self.topics_dir / filename
             
-            # 内容を保存
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(content)
+            # 内容を保存（atomic write）
+            success = self._atomic_write(file_path, content)
+            if not success:
+                return False
             
             # インデックス更新
             if topic not in self.index["topics"]:
@@ -100,8 +137,17 @@ class MemoryManager:
         """
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            entry_text = f"\n[{timestamp}]\n{entry}\n"
+            
             with open(self.diary_path, 'a', encoding='utf-8') as f:
-                f.write(f"\n[{timestamp}]\n{entry}\n")
+                f.write(entry_text)
+            
+            # 0バイト検証
+            if self.diary_path.exists() and self.diary_path.stat().st_size == 0:
+                print("警告: diary.txtが0バイトです。再書き込みします。")
+                with open(self.diary_path, 'w', encoding='utf-8') as f:
+                    f.write(entry_text)
+            
             return True
         except Exception as e:
             print(f"日誌追記エラー: {e}")

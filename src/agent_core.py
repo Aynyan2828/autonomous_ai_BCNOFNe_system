@@ -94,11 +94,52 @@ class AutonomousAgent:
         self.iteration_count = 0
         self.last_execution_time = None
         
+        # ユーザー目標の優先制御
+        self._user_goal_active = False  # ユーザーが設定した目標が有効か
+        self._goal_history_path = os.path.join(memory_dir, "goal_history.jsonl")
+        
         # 実行履歴（通知用）
         self.last_commands = []
         self.last_results = []
         self.last_thinking = ""
         self.last_action = {}
+    
+    def update_goal(self, new_goal: str, source: str = "user"):
+        """
+        外部から目標を更新する
+        
+        Args:
+            new_goal: 新しい目標
+            source: 更新元（"user" or "system"）
+        """
+        old_goal = self.current_goal
+        
+        if source == "user":
+            # 旧目標を履歴に退避
+            try:
+                os.makedirs(os.path.dirname(self._goal_history_path), exist_ok=True)
+                with open(self._goal_history_path, 'a', encoding='utf-8') as f:
+                    import json as _json
+                    f.write(_json.dumps({
+                        "old_goal": old_goal,
+                        "new_goal": new_goal,
+                        "reason": "REPLACED_BY_USER",
+                        "timestamp": datetime.now().isoformat()
+                    }, ensure_ascii=False) + "\n")
+            except Exception as e:
+                self.log(f"目標履歴の保存に失敗: {e}", "WARNING")
+            
+            # 内部状態リセット
+            self.last_commands = []
+            self.last_results = []
+            self.last_action = {}
+            self.last_thinking = ""
+            
+            # ユーザー目標フラグを有効化
+            self._user_goal_active = True
+        
+        self.current_goal = new_goal
+        self.log(f"目標更新 [{source}]: {old_goal} → {new_goal}", "INFO")
     
     def log(self, message: str, level: str = "INFO"):
         """
@@ -287,11 +328,23 @@ class AutonomousAgent:
             result["diary_saved"] = success
             self.log(f"日誌追記: {'成功' if success else '失敗'}")
         
-        # 次の目標を更新
+        # 次の目標を更新（ユーザー目標優先制御）
         next_goal = action.get("next_goal", "")
         if next_goal:
-            self.current_goal = next_goal
-            self.log(f"目標更新: {next_goal}")
+            if self._user_goal_active:
+                # ユーザー目標が有効な間はGPTのnext_goalで上書きしない
+                self.log(f"GPT提案の目標をスキップ（ユーザー目標優先）: {next_goal}")
+                # ただしGPTが明らかに別の主題を提案 → ユーザー目標完了とみなす
+                # （簡易判定: say に「完了」「達成」が含まれる場合）
+                say_text = action.get("say", "")
+                if any(kw in say_text for kw in ["完了", "達成", "終了", "完成", "done", "finished"]):
+                    self.log("ユーザー目標完了を検出。GPT提案の目標に切替", "INFO")
+                    self._user_goal_active = False
+                    self.current_goal = next_goal
+                    self.log(f"目標更新: {next_goal}")
+            else:
+                self.current_goal = next_goal
+                self.log(f"目標更新: {next_goal}")
         
         # 自己改善機能
         self_improve = action.get("self_improve", {})

@@ -8,6 +8,8 @@ LINE Botモジュール
 import os
 import json
 import subprocess
+import uuid
+import re
 from datetime import datetime
 from typing import Optional, Dict
 from pathlib import Path
@@ -58,6 +60,10 @@ class LINEBot:
         
         # 課金確認の待機状態を管理
         self.pending_confirmations = {}
+        
+        # LINE実行ログ送信フラグ（デフォルトOFF）
+        self.exec_log_enabled = os.getenv("LINE_EXEC_LOG_ENABLED", "false").lower() == "true"
+        self._exec_log_timeout = None  # 一時有効化のタイムアウト
     
     def send_message(self, message: str, user_id: Optional[str] = None) -> bool:
         """
@@ -156,6 +162,32 @@ class LINEBot:
 時刻: {datetime.now().strftime("%H:%M:%S")}
 """
         return self.send_message(message)
+    
+    def send_status(self, status_message: str) -> bool:
+        """
+        短い状態通知をLINEに送信
+        
+        Args:
+            status_message: 状態メッセージ（例: "⏳ 実行中: ファイル整理"）
+            
+        Returns:
+            成功したらTrue
+        """
+        return self.send_message(status_message)
+    
+    def is_exec_log_enabled(self) -> bool:
+        """
+        LINE実行ログ送信が有効かチェック（一時有効化対応）
+        
+        Returns:
+            有効ならTrue
+        """
+        import time
+        if self._exec_log_timeout and time.time() < self._exec_log_timeout:
+            return True
+        if self._exec_log_timeout and time.time() >= self._exec_log_timeout:
+            self._exec_log_timeout = None  # タイムアウト
+        return self.exec_log_enabled
     
     def send_error_notification(self, error_message: str) -> bool:
         """
@@ -347,13 +379,37 @@ API使用料が閾値に達しました
                         event.reply_token,
                         TextSendMessage(text=result)
                     )
-                else:
-                    # 通常のメッセージ（エージェントへの指示として処理）
-                    self._save_user_command(text, event.source.user_id)
+                elif text.lower() in ["log on", "ログon", "ログオン"]:
+                    # LINE実行ログを一時有効化（30分間）
+                    import time as _time
+                    self._exec_log_timeout = _time.time() + 1800
                     self.line_bot_api.reply_message(
                         event.reply_token,
-                        TextSendMessage(text="📝 指示を受け付けました\n\n✅ 目標を設定しました:\n" + text)
+                        TextSendMessage(text="📊 LINE実行ログを30分間有効にしました。\n無効にするには「log off」と送信してください。")
                     )
+                elif text.lower() in ["log off", "ログoff", "ログオフ"]:
+                    # LINE実行ログを無効化
+                    self._exec_log_timeout = None
+                    self.exec_log_enabled = False
+                    self.line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text="📊 LINE実行ログを無効にしました。")
+                    )
+                else:
+                    # 入力種別を判定
+                    event_type = self._classify_input(text)
+                    self._save_event(event_type, text, event.source.user_id)
+                    
+                    if event_type == "query":
+                        self.line_bot_api.reply_message(
+                            event.reply_token,
+                            TextSendMessage(text="🔍 質問を受け付けました。回答を準備中...")
+                        )
+                    else:
+                        self.line_bot_api.reply_message(
+                            event.reply_token,
+                            TextSendMessage(text="📝 指示を受け付けました\n\n✅ 目標を設定しました:\n" + text)
+                        )
         
         return app
     
@@ -375,23 +431,90 @@ API使用料が閾値に達しました
                 "timestamp": datetime.now().isoformat()
             }, f, ensure_ascii=False, indent=2)
     
+    def _classify_input(self, text: str) -> str:
+        """
+        入力テキストを種別判定する
+        
+        Args:
+            text: ユーザーの入力テキスト
+            
+        Returns:
+            "query" or "goal"
+        """
+        # 質問パターン（正規表現）
+        query_patterns = [
+            r'[?？]',                    # 疑問符
+            r'(教えて|おしえて)',         # 教えて系
+            r'(天気|気温|温度)',          # 天気系
+            r'^(何|なに|なん)',           # 何〜
+            r'^(いつ|どこ|誰|だれ)',     # 疑問詞
+            r'(調べて|しらべて)',         # 調べて系
+            r'(どう|どんな|どれ)',       # どう系
+            r'(ある|ない|できる)\s*[?？]',  # 可否質問
+            r'(とは|って何|ってなに)',   # 定義質問
+            r'(意味|違い)',              # 意味・違い
+            r'(わかる|知って|しって)',   # 知識確認
+        ]
+        
+        text_stripped = text.strip()
+        
+        for pattern in query_patterns:
+            if re.search(pattern, text_stripped):
+                return "query"
+        
+        # 短いテキスト（10文字以下）で命令形でなければ質問扱い
+        if len(text_stripped) <= 10 and not re.search(r'(して|しろ|せよ|する)$', text_stripped):
+            return "query"
+        
+        return "goal"
+    
+    def _save_event(self, event_type: str, text: str, user_id: str):
+        """
+        イベントをインボックスと履歴に保存
+        
+        Args:
+            event_type: "query" or "goal"
+            text: テキスト
+            user_id: ユーザーID
+        """
+        event_data = {
+            "type": event_type,
+            "text": text,
+            "user_id": user_id,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # 1) インボックスに追記（未処理キュー）
+        inbox_file = "/home/pi/autonomous_ai/commands/inbox.jsonl"
+        os.makedirs(os.path.dirname(inbox_file), exist_ok=True)
+        
+        with open(inbox_file, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(event_data, ensure_ascii=False) + "\n")
+        
+        # 2) 永続履歴に保存
+        today = datetime.now().strftime("%Y%m%d")
+        history_dir = f"/home/pi/autonomous_ai/commands/history/{today}"
+        os.makedirs(history_dir, exist_ok=True)
+        
+        event_id = str(uuid.uuid4())
+        history_file = os.path.join(history_dir, f"{event_id}.json")
+        
+        with open(history_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                **event_data,
+                "event_id": event_id
+            }, f, ensure_ascii=False, indent=2)
+    
     def _save_user_command(self, command: str, user_id: str):
         """
-        ユーザーコマンドを保存
+        ユーザーコマンドを保存（後方互換用）
         
         Args:
             command: コマンド
             user_id: ユーザーID
         """
-        command_file = "/home/pi/autonomous_ai/commands/user_commands.jsonl"
-        os.makedirs(os.path.dirname(command_file), exist_ok=True)
-        
-        with open(command_file, 'a', encoding='utf-8') as f:
-            f.write(json.dumps({
-                "command": command,
-                "user_id": user_id,
-                "timestamp": datetime.now().isoformat()
-            }, ensure_ascii=False) + "\n")
+        # 新しいイベント方式で保存
+        self._save_event("goal", command, user_id)
     
     def _stop_ai_service(self) -> str:
         """

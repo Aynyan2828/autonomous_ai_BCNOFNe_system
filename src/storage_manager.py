@@ -194,7 +194,8 @@ class StorageManager:
             "moved_files": 0,
             "failed_files": 0,
             "total_size": 0,
-            "dry_run": dry_run
+            "dry_run": dry_run,
+            "moved_details": []  # 各ファイルのsrc/dst/size
         }
         
         for file_path in old_files:
@@ -203,13 +204,25 @@ class StorageManager:
                 result["total_size"] += file_size
                 
                 if not dry_run:
+                    relative_path = file_path.relative_to(self.ssd_path)
+                    hdd_dest = self.hdd_path / relative_path
                     if self.move_to_hdd(file_path):
                         result["moved_files"] += 1
+                        result["moved_details"].append({
+                            "src": str(file_path),
+                            "dst": str(hdd_dest),
+                            "size": file_size
+                        })
                     else:
                         result["failed_files"] += 1
                 else:
                     print(f"[DRY RUN] 移動予定: {file_path} ({file_size} bytes)")
                     result["moved_files"] += 1
+                    result["moved_details"].append({
+                        "src": str(file_path),
+                        "dst": "(dry-run)",
+                        "size": file_size
+                    })
                     
             except Exception as e:
                 print(f"ファイル処理エラー: {e}")
