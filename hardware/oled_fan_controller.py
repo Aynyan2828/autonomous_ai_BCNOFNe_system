@@ -380,33 +380,15 @@ class OLEDFanController:
         cpu_t = system_info.get("cpu_temp", 0)
         disk_pct = system_info.get("disk_percent", 0)
 
-        line1 = f"shipOS:{mode_disp} {mode_emoji}"
-        line2 = f"DEST:{goal_short}"
-        line3 = f"HELM:{ai_disp} {mood.emoji}{mood.score:02d}"
-        line4 = f"TEMP:{cpu_t:.0f}C DISK:{disk_pct:.0f}%"
-        line5 = f"IP:{ip}"
-
-        # OLEDDisplayを使って表示（既存displayメソッドをバイパスして直接描画）
-        if self.oled_display.oled and self.oled_display.draw:
-            self.oled_display.draw.rectangle(
-                (0, 0, self.oled_display.WIDTH, self.oled_display.HEIGHT),
-                outline=0, fill=0
-            )
-            lines = [line1, line2, line3, line4, line5]
-            for i, line in enumerate(lines):
-                text = self.oled_display.format_line(line, 21)
-                self.oled_display.draw.text(
-                    (0, i * 12), text,
-                    font=self.oled_display.font, fill=255
-                )
-            self.oled_display.oled.image(self.oled_display.image)
-            self.oled_display.oled.show()
-        else:
-            # コンソール出力（開発環境用）
-            print("\n" + "=" * 30)
-            for l in [line1, line2, line3, line4, line5]:
-                print(f"  {l}")
-            print("=" * 30)
+        # 5行を構築してドライバに渡す
+        lines = [
+            f"shipOS:{mode_disp} {mode_emoji}",
+            f"DEST:{goal_short}",
+            f"HELM:{ai_disp} {mood.emoji}{mood.score:02d}",
+            f"TEMP:{cpu_t:.0f}C DISK:{disk_pct:.0f}%",
+            f"IP:{ip}",
+        ]
+        self.oled_display.render_lines(lines)
 
     # ========== メインループ ==========
 
