@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -382,3 +383,189 @@ if __name__ == "__main__":
         print(f"警告: {alert['message']}")
     else:
         print("問題なし")
+=======
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+ShipOS Storage Manager v2.0
+- SSD/HDD hierarchy management
+- Log compression & rotation
+- Duplicate file detection (SHA256)
+- Automated cleanup rules
+"""
+
+import os
+import shutil
+import hashlib
+import gzip
+import logging
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import List, Dict, Optional
+import json
+
+logger = logging.getLogger(__name__)
+
+class StorageManager:
+    """shipOS ストレージ管理クラス"""
+
+    CLEANUP_LOG = "/mnt/hdd/system_logs/cleanup.log"
+    TRASH_DIR = "/mnt/hdd/.trash"
+
+    def __init__(
+        self,
+        ssd_path: str = "/home/pi/autonomous_ai",
+        hdd_path: str = "/mnt/hdd",
+        access_threshold_days: int = 30
+    ):
+        self.ssd_path = Path(ssd_path)
+        self.hdd_path = Path(hdd_path) / "archive"
+        self.access_threshold_days = access_threshold_days
+        
+        # ディレクトリ作成
+        self.ssd_path.mkdir(parents=True, exist_ok=True)
+        self.hdd_path.mkdir(parents=True, exist_ok=True)
+        Path(self.CLEANUP_LOG).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.TRASH_DIR).mkdir(parents=True, exist_ok=True)
+
+    def _log_cleanup(self, message: str):
+        """クリーンアップログに記録"""
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            with open(self.CLEANUP_LOG, "a", encoding="utf-8") as f:
+                f.write(f"[{ts}] {message}\n")
+        except Exception:
+            pass
+
+    def get_disk_usage(self, path: str) -> Dict:
+        try:
+            stat = shutil.disk_usage(path)
+            return {
+                "total": stat.total,
+                "used": stat.used,
+                "free": stat.free,
+                "percent": (stat.used / stat.total) * 100 if stat.total > 0 else 0
+            }
+        except Exception as e:
+            return {}
+
+    def _get_file_hash(self, file_path: Path) -> str:
+        """SHA256ハッシュ値を計算"""
+        sha256 = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256.update(byte_block)
+        return sha256.hexdigest()
+
+    def compress_log(self, file_path: Path):
+        """ログファイルをgzip圧縮"""
+        if file_path.suffix == ".gz":
+            return
+        gz_path = file_path.with_suffix(file_path.suffix + ".gz")
+        with open(file_path, "rb") as f_in:
+            with gzip.open(gz_path, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        file_path.unlink()
+        self._log_cleanup(f"Compressed: {file_path.name} -> {gz_path.name}")
+
+    def archive_old_files(self, dry_run: bool = False) -> Dict:
+        """
+        高度なクリーンアップルールを適用
+        1. 30日以上のログを圧縮
+        2. 重複CSVを削除 (SHA256)
+        3. 100MB以上のログを分割 (簡易的に圧縮のみ実装)
+        4. ゴミ箱の7日経過ファイルを削除
+        """
+        results = {"moved_files": 0, "total_size": 0, "deleted_files": 0}
+        now = datetime.now()
+        
+        self._log_cleanup(f"--- START CLEANUP (dry_run={dry_run}) ---")
+
+        # 1. ログ圧縮 & 移動 (30日経過)
+        log_threshold = now - timedelta(days=30)
+        for log_file in self.ssd_path.rglob("*.log"):
+            if log_file.stat().st_mtime < log_threshold.timestamp():
+                file_size = log_file.stat().st_size
+                results["total_size"] += file_size
+                if not dry_run:
+                    self.compress_log(log_file)
+                    results["moved_files"] += 1
+                else:
+                    self._log_cleanup(f"[DRY] Would compress: {log_file.name}")
+
+        # 2. 重複CSV削除
+        csv_hashes = {}
+        for csv_file in self.ssd_path.rglob("*.csv"):
+            try:
+                h = self._get_file_hash(csv_file)
+                if h in csv_hashes:
+                    # 重複発見
+                    results["deleted_files"] += 1
+                    if not dry_run:
+                        csv_file.unlink()
+                        self._log_cleanup(f"Deleted Duplicate: {csv_file.name} (matches {csv_hashes[h]})")
+                    else:
+                        self._log_cleanup(f"[DRY] Would delete duplicate: {csv_file.name}")
+                else:
+                    csv_hashes[h] = csv_file.name
+            except Exception: pass
+
+        # 3. ゴミ箱の清掃 (7日経過)
+        trash_threshold = now - timedelta(days=7)
+        for trash_file in Path(self.TRASH_DIR).glob("*"):
+            if trash_file.stat().st_mtime < trash_threshold.timestamp():
+                if not dry_run:
+                    if trash_file.is_file(): trash_file.unlink()
+                    else: shutil.rmtree(trash_file)
+                    self._log_cleanup(f"Purged from Trash: {trash_file.name}")
+                else:
+                    self._log_cleanup(f"[DRY] Would purge from trash: {trash_file.name}")
+
+        self._log_cleanup(f"--- FINISH CLEANUP: {results['moved_files']} moved, {results['deleted_files']} deleted ---")
+        return results
+
+    def move_to_trash(self, file_path: Path):
+        """ファイルをゴミ箱へ移動"""
+        if not file_path.exists(): return
+        dest = Path(self.TRASH_DIR) / file_path.name
+        if dest.exists():
+            dest = dest.with_name(f"{dest.stem}_{int(datetime.now().timestamp())}{dest.suffix}")
+        shutil.move(str(file_path), str(dest))
+        self._log_cleanup(f"Moved to Trash: {file_path.name}")
+
+    def monitor_storage(self, threshold_percent: float = 80.0) -> Optional[Dict]:
+        """ストレージを監視し、閾値を超えたら警告情報を返す"""
+        ssd_usage = self.get_disk_usage(str(self.ssd_path))
+        if ssd_usage and ssd_usage["percent"] > threshold_percent:
+            return {
+                "level": "warning",
+                "message": f"SSD使用率が{ssd_usage['percent']:.1f}%に達しました",
+                "usage": ssd_usage
+            }
+        return None
+
+    def cleanup_temp_files(self) -> int:
+        """一時ファイルを削除"""
+        deleted_count = 0
+        temp_patterns = ["*.tmp", "*.temp", "*.cache"]
+        for pattern in temp_patterns:
+            for file_path in self.ssd_path.rglob(pattern):
+                if file_path.is_file():
+                    file_path.unlink()
+                    deleted_count += 1
+        return deleted_count
+
+    def get_storage_summary(self) -> str:
+        ssd = self.get_disk_usage(str(self.ssd_path))
+        hdd = self.get_disk_usage(str(self.hdd_path.parent)) # /mnt/hdd
+        
+        status = "【SSD】"
+        if ssd: status += f"{ssd['percent']:.1f}% ({ssd['free']//1024//1024}MB free)\n"
+        else: status += "DETECT ERROR\n"
+        
+        status += "【HDD】"
+        if hdd: status += f"{hdd['percent']:.1f}% ({hdd['free']//1024//1024}MB free)"
+        else: status += "NOT MOUNTED"
+        
+        return status
+>>>>>>> Stashed changes

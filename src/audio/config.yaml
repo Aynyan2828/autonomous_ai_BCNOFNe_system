@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 # shipOS Audio Configuration
 # BCNOFNe 音声サブシステム設定
 
@@ -84,3 +85,108 @@ failsafe:
   tts_fail_silent: true     # TTS失敗時はログのみ
   device_reconnect: true    # デバイス消失時に自動再接続
   reconnect_interval: 5     # 再接続間隔（秒）
+=======
+# shipOS Audio Configuration
+# BCNOFNe 音声サブシステム設定
+
+# 入力デバイス（USBマクロパッド）
+input:
+  device_path: "/dev/input/event13"  # input-remapper USB Composite Device Keyboard forwarded
+  device_name: "USB Composite Device" # デバイス名による自動検出（パスが変動する場合のフォールバック）
+  mode: "push_to_talk"   # "push_to_talk" or "toggle"
+
+# キー割り当て（evdevコード）
+keys:
+  talk: 183        # F13
+  monologue_mute: 184  # F14
+  status_read: 185     # F15
+  logbook: 186         # F16
+  emergency_stop: 187  # F17
+  volume_up: 115       # KEY_VOLUMEUP
+  volume_down: 114     # KEY_VOLUMEDOWN
+
+# STT（音声認識）
+stt:
+  engine: "whisper_cpp"    # "whisper_cpp" or "whisper_api"
+  whisper_cpp:
+    binary: "/home/pi/whisper.cpp/build/bin/whisper-cli"
+    model: "/home/pi/whisper.cpp/models/ggml-tiny.bin"
+    language: "ja"
+    threads: 4
+  whisper_api:
+    # フォールバック用（オフライン優先のため通常使わない）
+    model: "whisper-1"
+
+# TTS（音声合成）
+tts:
+  engine: "hybrid"         # "hybrid" / "voicevox" / "openai_tts" / "piper"
+  hybrid:
+    cache_dir: "/home/pi/autonomous_ai_BCNOFNe_system/src/audio/cache"
+    openai_model: "tts-1"
+    openai_voice: "shimmer"  # 萌え寄り女性ボイス
+  voicevox:
+    core_dir: "/home/pi/voicevox/voicevox_core"
+    speaker_id: 47         # 47=ナースロボ＿タイプT（ノーマル）
+    speed: 1.0
+    # speaker_id一覧:
+    # 47=ナースロボ＿タイプT（ノーマル） 48=楽々 49=恐怖 50=内緒話
+    # 0=四国めたん（あまあま）  1=ずんだもん（あまあま）
+    # 2=四国めたん（ノーマル）  3=ずんだもん（ノーマル）
+    # 8=春日部つむぎ          14=冥鳴ひまり
+  piper:
+    binary: "/home/pi/piper/piper"
+    model: "/home/pi/piper/ja_JP-takumi-medium.onnx"
+    config: "/home/pi/piper/ja_JP-takumi-medium.onnx.json"
+    speed: 1.0
+    speaker_id: 0
+  openai_tts:
+    # フォールバック用
+    model: "tts-1"
+    voice: "nova"
+
+# 録音設定
+recording:
+  format: "wav"
+  sample_rate: 16000
+  channels: 1
+  device: "plughw:3,0"  # Sound Blaster G3
+  max_duration: 30      # 最大録音秒数
+  silence_timeout: 3    # 無音タイムアウト
+
+# 再生設定
+playback:
+  device: "plughw:3,0"  # Sound Blaster G3
+  stereo: true          # モノラル→ステレオ変換
+
+# 音量設定
+volume:
+  conversation: 0.70
+  monologue: 0.25
+  monologue_night: 0.15    # 22:00〜06:00
+  notification: 0.50
+  emergency: 1.00
+  max_volume: 0.85
+  step: 0.05               # ノブ1クリック分
+
+# 独り言設定
+monologue:
+  min_interval_min: 7
+  max_interval_min: 25
+  quiet_hours_start: 22     # 夜間開始
+  quiet_hours_end: 6        # 夜間終了
+  enabled: true
+
+# 優先度（数字が小さいほど高優先）
+priority:
+  talk: 1
+  emergency: 2
+  notification: 3
+  monologue: 4
+
+# フェイルセーフ
+failsafe:
+  stt_fail_message: "聞き取れんかった、ごめんマスター"
+  tts_fail_silent: true     # TTS失敗時はログのみ
+  device_reconnect: true    # デバイス消失時に自動再接続
+  reconnect_interval: 5     # 再接続間隔（秒）
+>>>>>>> Stashed changes

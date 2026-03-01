@@ -1,0 +1,48 @@
+﻿ 3譛・01 16:31:58 raspberrypi shipos-audio[35695]: [2026-03-01 16:31:58,056] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:03 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:03,057] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:08 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:08,058] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:13 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:13,059] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:18 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:18,059] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:23 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:23,060] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:28 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:28,061] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:33 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:33,062] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:38 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:38,063] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:43 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:43,063] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:48 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:48,064] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:53 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:53,065] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:32:58 raspberrypi shipos-audio[35695]: [2026-03-01 16:32:58,066] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:33:03 raspberrypi shipos-audio[35695]: [2026-03-01 16:33:03,066] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:33:08 raspberrypi shipos-audio[35695]: [2026-03-01 16:33:08,067] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:33:13 raspberrypi shipos-audio[35695]: [2026-03-01 16:33:13,068] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:33:18 raspberrypi shipos-audio[35695]: [2026-03-01 16:33:18,069] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:33:23 raspberrypi shipos-audio[35695]: [2026-03-01 16:33:23,069] [WARNING] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ譛ｪ讀懷・: /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-if01-mouse4330363235-if01-event-kbd
+ 3譛・01 16:33:24 raspberrypi systemd[1]: Stopping shipos-audio.service - shipOS Audio Manager (aynyan)...
+ 3譛・01 16:33:27 raspberrypi shipos-audio[35695]: [2026-03-01 16:33:27,865] [INFO] audio.input_listener: [InputListener] 蛛懈ｭ｢
+ 3譛・01 16:33:27 raspberrypi shipos-audio[35695]: [2026-03-01 16:33:27,865] [INFO] __main__: [AudioManager] 蛛懈ｭ｢
+ 3譛・01 16:33:28 raspberrypi shipos-audio[35695]: [2026-03-01 16:33:28,070] [INFO] audio.input_listener: [InputListener] 蛛懈ｭ｢
+ 3譛・01 16:33:28 raspberrypi shipos-audio[35695]: [2026-03-01 16:33:28,070] [INFO] __main__: [AudioManager] 蛛懈ｭ｢
+ 3譛・01 16:33:28 raspberrypi systemd[1]: shipos-audio.service: Deactivated successfully.
+ 3譛・01 16:33:28 raspberrypi systemd[1]: Stopped shipos-audio.service - shipOS Audio Manager (aynyan).
+ 3譛・01 16:33:28 raspberrypi systemd[1]: Started shipos-audio.service - shipOS Audio Manager (aynyan).
+ 3譛・01 16:33:28 raspberrypi shipos-audio[36843]: [2026-03-01 16:33:28,592] [INFO] __main__: [AudioManager] STT: whisper_cpp
+ 3譛・01 16:33:28 raspberrypi shipos-audio[36843]: [2026-03-01 16:33:28,593] [INFO] __main__: [AudioManager] TTS: hybrid
+ 3譛・01 16:33:28 raspberrypi shipos-audio[36843]: [2026-03-01 16:33:28,594] [INFO] audio.input_listener: [InputListener] 襍ｷ蜍・ /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-event-kbd
+ 3譛・01 16:33:28 raspberrypi shipos-audio[36843]: [2026-03-01 16:33:28,594] [INFO] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ謗･邯・ ELECOM ELECOM Relacon
+ 3譛・01 16:33:28 raspberrypi shipos-audio[36843]: [2026-03-01 16:33:28,596] [INFO] __main__: [AudioManager] 襍ｷ蜍募ｮ御ｺ・ 3譛・01 16:33:28 raspberrypi shipos-audio[36843]: [2026-03-01 16:33:28,596] [INFO] __main__: [AudioManager] State -> speaking
+ 3譛・01 16:33:28 raspberrypi shipos-audio[36843]: [2026-03-01 16:33:28,607] [INFO] audio.tts_engine: [TTS] 繧ｭ繝｣繝・す繝･繝偵ャ繝・ 縺ゅｆ縺ｫ繧・ｓ襍ｷ蜍輔ゅ♀縺ｯ繧医≧縲√・繧ｹ繧ｿ繝ｼ...
+ 3譛・01 16:33:32 raspberrypi shipos-audio[36843]: [2026-03-01 16:33:32,005] [INFO] __main__: [AudioManager] State -> idle
+ 3譛・01 16:37:59 raspberrypi systemd[1]: Stopping shipos-audio.service - shipOS Audio Manager (aynyan)...
+ 3譛・01 16:38:02 raspberrypi shipos-audio[36843]: [2026-03-01 16:38:02,974] [INFO] audio.input_listener: [InputListener] 蛛懈ｭ｢
+ 3譛・01 16:38:02 raspberrypi shipos-audio[36843]: [2026-03-01 16:38:02,975] [INFO] __main__: [AudioManager] 蛛懈ｭ｢
+ 3譛・01 16:38:05 raspberrypi shipos-audio[36843]: [2026-03-01 16:38:05,975] [INFO] audio.input_listener: [InputListener] 蛛懈ｭ｢
+ 3譛・01 16:38:05 raspberrypi shipos-audio[36843]: [2026-03-01 16:38:05,975] [INFO] __main__: [AudioManager] 蛛懈ｭ｢
+ 3譛・01 16:38:06 raspberrypi systemd[1]: shipos-audio.service: Deactivated successfully.
+ 3譛・01 16:38:06 raspberrypi systemd[1]: Stopped shipos-audio.service - shipOS Audio Manager (aynyan).
+ 3譛・01 16:38:06 raspberrypi systemd[1]: Started shipos-audio.service - shipOS Audio Manager (aynyan).
+ 3譛・01 16:38:06 raspberrypi shipos-audio[38776]: [2026-03-01 16:38:06,458] [INFO] __main__: [AudioManager] STT: whisper_cpp
+ 3譛・01 16:38:06 raspberrypi shipos-audio[38776]: [2026-03-01 16:38:06,460] [INFO] __main__: [AudioManager] TTS: hybrid
+ 3譛・01 16:38:06 raspberrypi shipos-audio[38776]: [2026-03-01 16:38:06,461] [INFO] audio.input_listener: [InputListener] 襍ｷ蜍・ /dev/input/by-id/usb-ELECOM_ELECOM_Relacon-event-kbd
+ 3譛・01 16:38:06 raspberrypi shipos-audio[38776]: [2026-03-01 16:38:06,462] [INFO] audio.input_listener: [InputListener] 繝・ヰ繧､繧ｹ謗･邯・ ELECOM ELECOM Relacon
+ 3譛・01 16:38:06 raspberrypi shipos-audio[38776]: [2026-03-01 16:38:06,464] [INFO] __main__: [AudioManager] 襍ｷ蜍募ｮ御ｺ・ 3譛・01 16:38:06 raspberrypi shipos-audio[38776]: [2026-03-01 16:38:06,464] [INFO] __main__: [AudioManager] State -> speaking
+ 3譛・01 16:38:06 raspberrypi shipos-audio[38776]: [2026-03-01 16:38:06,475] [INFO] audio.tts_engine: [TTS] 繧ｭ繝｣繝・す繝･繝偵ャ繝・ 縺ゅｆ縺ｫ繧・ｓ襍ｷ蜍輔ゅ♀縺ｯ繧医≧縲√・繧ｹ繧ｿ繝ｼ...
+ 3譛・01 16:38:09 raspberrypi shipos-audio[38776]: [2026-03-01 16:38:09,880] [INFO] __main__: [AudioManager] State -> idle
