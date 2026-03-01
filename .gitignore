@@ -1,0 +1,18 @@
+# secrets
+.env
+.env.*
+*.key
+*.pem
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# logs / runtime
+logs/
+*.log
+memory/
+tmp/
+.cache/
