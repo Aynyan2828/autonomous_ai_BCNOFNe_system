@@ -344,11 +344,25 @@ class AudioManager:
     
     # ========== 再生 ==========
     
+    def _clean_for_speech(self, text: str) -> str:
+        """読み上げ用にテキストをクリーニングする"""
+        import re
+        # 簡単な記号の除去
+        text = re.sub(r'[⚠️✅❌⏹️🚀🗣️🔊🔇📊🔄🏥📔💬🧠💰🚨🛑😎😊🥶😗😨🥵😤]', '', text)
+        text = text.replace("===", "").replace("---", "")
+        text = text.replace("\n", "。")
+        text = re.sub(r'。+', '。', text)
+        return text.strip()
+    
     def speak(self, text: str, priority: Priority = Priority.NOTIFICATION,
               volume: float = 0.5):
         """テキストを音声再生キューに追加"""
-        logger.info(f"[AudioManager] [AUDIO_DEBUG] Adding speak to queue: {text}")
-        self._speak_queue.put((priority.value, time.time(), SpeakRequest(text, priority, volume)))
+        clean_text = self._clean_for_speech(text)
+        if not clean_text:
+            return  # クリーニングして空になったら読まない
+            
+        logger.info(f"[AudioManager] [AUDIO_DEBUG] Adding speak to queue: {clean_text}")
+        self._speak_queue.put((priority.value, time.time(), SpeakRequest(clean_text, priority, volume)))
     
     def _speak_worker(self):
         """再生ワーカースレッド"""
