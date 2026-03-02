@@ -155,7 +155,7 @@ GPT-4は、修正のリスクレベルを以下の基準で評価します。
 1.  **バックアップ自動作成**: 修正前に必ず元のファイルをバックアップします。
 2.  **リスク評価**: GPT-4が修正のリスクを評価し、高リスクの修正は自動適用されません。
 3.  **分析のみモード**: デフォルトでは、分析と修正提案のみを行い、実際の適用は行いません（`auto_apply=False`）。
-4.  **修正履歴の記録**: すべての修正は `/home/pi/autonomous_ai/logs/self_modifications.jsonl` に記録されます。
+4.  **修正履歴の記録**: すべての修正は `/home/pi/autonomous_ai_BCNOFNe_system/logs/self_modifications.jsonl` に記録されます。
 5.  **行番号検証**: 修正対象の行番号が有効範囲内かチェックします。
 
 ### バックアップ管理
@@ -167,7 +167,7 @@ GPT-4は、修正のリスクレベルを以下の基準で評価します。
 例: agent_core_20260219_123456.py
 ```
 
-保存先: `/home/pi/autonomous_ai/backups/`
+保存先: `/home/pi/autonomous_ai_BCNOFNe_system/backups/`
 
 ## 7. 使用例
 
@@ -203,8 +203,8 @@ result = modifier.self_improve(
 from pathlib import Path
 
 modifier.rollback(
-    backup_path=Path("/home/pi/autonomous_ai/backups/agent_core_20260219_123456.py"),
-    target_path=Path("/home/pi/autonomous_ai/src/agent_core.py")
+    backup_path=Path("/home/pi/autonomous_ai_BCNOFNe_system/backups/agent_core_20260219_123456.py"),
+    target_path=Path("/home/pi/autonomous_ai_BCNOFNe_system/src/agent_core.py")
 )
 ```
 

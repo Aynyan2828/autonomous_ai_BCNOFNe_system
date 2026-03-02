@@ -85,10 +85,10 @@ class OLEDFanController:
     AI_STATE_FILE = "/tmp/shipos_ai_state.json"
 
     # shipOSモード状態ファイル
-    SHIP_MODE_FILE = "/home/pi/autonomous_ai/state/ship_mode.json"
+    SHIP_MODE_FILE = "/home/pi/autonomous_ai_BCNOFNe_system/state/ship_mode.json"
 
     # 状態ログ
-    STATE_DIR = "/home/pi/autonomous_ai/state"
+    STATE_DIR = "/home/pi/autonomous_ai_BCNOFNe_system/state"
     MOOD_LOG_PATH = os.path.join(STATE_DIR, "mood_log.jsonl")
     LAST_TOUCH_PATH = os.path.join(STATE_DIR, "last_user_touch.txt")
     LINE_STATUS_FILE = "/tmp/shipos_line_status.json"
@@ -101,7 +101,7 @@ class OLEDFanController:
 
     def __init__(
         self,
-        log_dir: str = "/home/pi/autonomous_ai/logs",
+        log_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/logs",
         enable_fan_warnings: bool = True
     ):
         """初期化"""
@@ -561,7 +561,7 @@ class OLEDFanController:
         import os
         
         # 1. ロゴ表示 (2秒固定)
-        logo_path = "/home/pi/autonomous_ai/oled_128x64_resize_dither.png"
+        logo_path = "/home/pi/autonomous_ai_BCNOFNe_system/oled_128x64_resize_dither.png"
         if os.path.exists(logo_path) and hasattr(self.oled_display, 'draw_image'):
             self.oled_display.clear_buffer()
             self.oled_display.draw_image(logo_path)

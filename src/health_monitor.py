@@ -35,7 +35,7 @@ class HealthCheck:
 class HealthMonitor:
     """統合ヘルスモニタ"""
     
-    HISTORY_FILE = "/home/pi/autonomous_ai/state/health_history.jsonl"
+    HISTORY_FILE = "/home/pi/autonomous_ai_BCNOFNe_system/state/health_history.jsonl"
     
     def __init__(self):
         self.last_results: List[HealthCheck] = []

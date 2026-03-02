@@ -69,10 +69,10 @@ class OLEDFanController:
     AI_STATE_FILE = "/var/run/ai_state.json"
 
     # shipOSモード状態ファイル
-    SHIP_MODE_FILE = "/home/pi/autonomous_ai/state/ship_mode.json"
+    SHIP_MODE_FILE = "/home/pi/autonomous_ai_BCNOFNe_system/state/ship_mode.json"
 
     # 状態ログ
-    STATE_DIR = "/home/pi/autonomous_ai/state"
+    STATE_DIR = "/home/pi/autonomous_ai_BCNOFNe_system/state"
     MOOD_LOG_PATH = os.path.join(STATE_DIR, "mood_log.jsonl")
     LAST_TOUCH_PATH = os.path.join(STATE_DIR, "last_user_touch.txt")
 
@@ -83,7 +83,7 @@ class OLEDFanController:
 
     def __init__(
         self,
-        log_dir: str = "/home/pi/autonomous_ai/logs",
+        log_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/logs",
         enable_fan_warnings: bool = True
     ):
         """初期化"""

@@ -107,7 +107,7 @@ while self.running:
 def send_startup_notifications(self):
     """起動通知を送信（重複防止付き）"""
     # 起動フラグチェック
-    startup_flag = StartupFlag("/home/pi/autonomous_ai/.startup_flag")
+    startup_flag = StartupFlag("/home/pi/autonomous_ai_BCNOFNe_system/.startup_flag")
     
     if not startup_flag.should_send_startup_notification(cooldown_minutes=5):
         print("起動通知は最近5分以内に送信済みです。スキップします。")
@@ -145,7 +145,7 @@ unzip autonomous_ai_system_v2_1_fixed.zip
 cd autonomous_ai_BCNOFNe_system
 
 # .envファイルをコピー（既存の設定を維持）
-cp /home/pi/autonomous_ai/.env .env
+cp /home/pi/autonomous_ai_BCNOFNe_system/.env .env
 
 # システムを再起動
 sudo systemctl daemon-reload
@@ -211,7 +211,7 @@ python3 src/line_bot.py
 
 ```bash
 # 起動フラグファイルを削除
-rm /home/pi/autonomous_ai/.startup_flag
+rm /home/pi/autonomous_ai_BCNOFNe_system/.startup_flag
 
 # システムを再起動
 sudo systemctl restart autonomous-ai.service

@@ -20,11 +20,11 @@ from typing import Dict, List, Any
 class FailSafe:
     """自己修復エンジン"""
     
-    BASE_DIR = "/home/pi/autonomous_ai"
-    LOG_DIR = "/home/pi/autonomous_ai/logs"
-    MEMORY_DIR = "/home/pi/autonomous_ai/memory"
+    BASE_DIR = "/home/pi/autonomous_ai_BCNOFNe_system"
+    LOG_DIR = "/home/pi/autonomous_ai_BCNOFNe_system/logs"
+    MEMORY_DIR = "/home/pi/autonomous_ai_BCNOFNe_system/memory"
     FALLBACK_DIR = "/tmp/ai_fallback"
-    RECOVERY_LOG = "/home/pi/autonomous_ai/state/recovery.jsonl"
+    RECOVERY_LOG = "/home/pi/autonomous_ai_BCNOFNe_system/state/recovery.jsonl"
     
     def __init__(self):
         os.makedirs(os.path.dirname(self.RECOVERY_LOG), exist_ok=True)

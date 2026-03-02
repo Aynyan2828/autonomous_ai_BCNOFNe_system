@@ -22,8 +22,8 @@ class AdvancedSelfModifier:
         self,
         api_key: str,
         model: str = "gpt-4.1-mini",
-        project_dir: str = "/home/pi/autonomous_ai",
-        backup_dir: str = "/home/pi/autonomous_ai/backups",
+        project_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system",
+        backup_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/backups",
         git_enabled: bool = True
     ):
         """

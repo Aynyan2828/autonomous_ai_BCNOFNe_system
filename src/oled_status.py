@@ -108,7 +108,7 @@ class OLEDStatus:
         time.sleep(0.5)
 
         # 2) SSD
-        ssd_path = Path("/home/pi/autonomous_ai")
+        ssd_path = Path("/home/pi/autonomous_ai_BCNOFNe_system")
         ssd_ok = ssd_path.exists() and os.access(str(ssd_path), os.W_OK)
         results["ssd"] = ssd_ok
         self._render(["[DIAG]", f"SSD: {'OK' if ssd_ok else 'NG'}", "", "", ""])

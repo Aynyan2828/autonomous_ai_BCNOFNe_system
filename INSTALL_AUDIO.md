@@ -61,7 +61,7 @@ aplay test.wav
 ## 4. Python依存
 
 ```bash
-cd /home/pi/autonomous_ai
+cd /home/pi/autonomous_ai_BCNOFNe_system
 pip install evdev pyyaml psutil
 ```
 
@@ -143,7 +143,7 @@ tts:
 
 ```bash
 # サービスファイルコピー
-sudo cp /home/pi/autonomous_ai/systemd/shipos-audio.service /etc/systemd/system/
+sudo cp /home/pi/autonomous_ai_BCNOFNe_system/systemd/shipos-audio.service /etc/systemd/system/
 
 # 有効化
 sudo systemctl daemon-reload
@@ -252,7 +252,7 @@ bash models/download-ggml-model.sh tiny
 pip install openai
 
 # .envにAPIキーを設定
-echo 'OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx' >> /home/pi/autonomous_ai/.env
+echo 'OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx' >> /home/pi/autonomous_ai_BCNOFNe_system/.env
 
 # 動作テスト
 python3 -c "
@@ -273,7 +273,7 @@ aplay /tmp/test_tts.wav
 ## 4. Python依存
 
 ```bash
-cd /home/pi/autonomous_ai
+cd /home/pi/autonomous_ai_BCNOFNe_system
 pip install evdev pyyaml psutil openai
 ```
 
@@ -355,7 +355,7 @@ tts:
 
 ```bash
 # サービスファイルコピー
-sudo cp /home/pi/autonomous_ai/systemd/shipos-audio.service /etc/systemd/system/
+sudo cp /home/pi/autonomous_ai_BCNOFNe_system/systemd/shipos-audio.service /etc/systemd/system/
 
 # 有効化
 sudo systemctl daemon-reload

@@ -17,7 +17,7 @@ from collections import Counter
 class ShipsLog:
     """航海日誌"""
     
-    LOG_DIR = "/home/pi/autonomous_ai/state/ships_log"
+    LOG_DIR = "/home/pi/autonomous_ai_BCNOFNe_system/state/ships_log"
     
     def __init__(self):
         os.makedirs(self.LOG_DIR, exist_ok=True)

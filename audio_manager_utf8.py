@@ -536,7 +536,7 @@ def main():
         level=logging.INFO,
         format='[%(asctime)s] [%(levelname)s] %(name)s: %(message)s',
         handlers=[
-            logging.FileHandler("/home/pi/autonomous_ai/logs/audio.log"),
+            logging.FileHandler("/home/pi/autonomous_ai_BCNOFNe_system/logs/audio.log"),
             logging.StreamHandler(),
         ]
     )

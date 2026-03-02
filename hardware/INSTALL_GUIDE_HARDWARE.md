@@ -79,7 +79,7 @@ sudo apt-get install -y python3-dev python3-pip i2c-tools
 
 1.  **プロジェクトディレクトリに移動します。**
     ```bash
-    cd /home/pi/autonomous_ai/hardware
+    cd /home/pi/autonomous_ai_BCNOFNe_system/hardware
     ```
 
 2.  **`requirements.txt` を使ってインストールします。**
@@ -103,7 +103,7 @@ sudo apt-get install -y python3-dev python3-pip i2c-tools
 
 1.  **サービスファイルをコピーします。**
     ```bash
-    sudo cp /home/pi/autonomous_ai/systemd/oled-fan-controller.service /etc/systemd/system/
+    sudo cp /home/pi/autonomous_ai_BCNOFNe_system/systemd/oled-fan-controller.service /etc/systemd/system/
     ```
 
 2.  **systemdをリロードします。**

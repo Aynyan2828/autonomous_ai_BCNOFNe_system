@@ -68,7 +68,7 @@ from vector_db import VectorDatabase
 # 初期化
 db = VectorDatabase(
     db_type="chromadb",
-    db_dir="/home/pi/autonomous_ai/vector_db",
+    db_dir="/home/pi/autonomous_ai_BCNOFNe_system/vector_db",
     api_key=os.getenv("OPENAI_API_KEY")
 )
 
@@ -169,7 +169,7 @@ from pathlib import Path
 # 初期化
 generator = TestGenerator(
     api_key=os.getenv("OPENAI_API_KEY"),
-    test_dir="/home/pi/autonomous_ai/tests"
+    test_dir="/home/pi/autonomous_ai_BCNOFNe_system/tests"
 )
 
 # 単一ファイルのテスト生成
@@ -269,7 +269,7 @@ d4e5f6g Before self-modification
     "summary": "すべてのログメッセージを日本語に統一",
     "risk_level": "low",
     "modified_files": ["src/memory.py", "src/executor.py"],
-    "backup_path": "/home/pi/autonomous_ai/backups/20240221_103000",
+    "backup_path": "/home/pi/autonomous_ai_BCNOFNe_system/backups/20240221_103000",
     "success": true
   }
 ]
@@ -300,7 +300,7 @@ from advanced_self_modifier import AdvancedSelfModifier
 # 初期化
 modifier = AdvancedSelfModifier(
     api_key=os.getenv("OPENAI_API_KEY"),
-    project_dir="/home/pi/autonomous_ai",
+    project_dir="/home/pi/autonomous_ai_BCNOFNe_system",
     git_enabled=True
 )
 

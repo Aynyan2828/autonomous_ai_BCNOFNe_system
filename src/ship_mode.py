@@ -66,8 +66,8 @@ class ShipMode:
     }
     
     DEFAULT_MODE = "autonomous"
-    STATE_FILE = "/home/pi/autonomous_ai/state/ship_mode.json"
-    HISTORY_FILE = "/home/pi/autonomous_ai/state/mode_history.jsonl"
+    STATE_FILE = "/home/pi/autonomous_ai_BCNOFNe_system/state/ship_mode.json"
+    HISTORY_FILE = "/home/pi/autonomous_ai_BCNOFNe_system/state/mode_history.jsonl"
     
     def __init__(self):
         """初期化"""

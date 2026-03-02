@@ -59,7 +59,7 @@ hardware/
 sudo raspi-config
 
 # ライブラリをインストール
-cd /home/pi/autonomous_ai/hardware
+cd /home/pi/autonomous_ai_BCNOFNe_system/hardware
 pip3 install -r requirements.txt
 
 # systemdサービスを登録

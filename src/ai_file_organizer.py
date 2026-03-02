@@ -24,8 +24,8 @@ class AIFileOrganizer:
         self,
         api_key: str,
         model: str = "gpt-4.1-mini",
-        base_dir: str = "/home/pi/autonomous_ai/nas",
-        organized_dir: str = "/home/pi/autonomous_ai/nas/organized"
+        base_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/nas",
+        organized_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/nas/organized"
     ):
         """
         初期化

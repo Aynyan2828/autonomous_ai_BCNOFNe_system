@@ -19,8 +19,8 @@ class BrowserController:
     def __init__(
         self,
         headless: bool = True,
-        user_data_dir: str = "/home/pi/autonomous_ai/browser_data",
-        screenshots_dir: str = "/home/pi/autonomous_ai/screenshots"
+        user_data_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/browser_data",
+        screenshots_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/screenshots"
     ):
         """
         初期化

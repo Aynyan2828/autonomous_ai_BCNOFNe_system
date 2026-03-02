@@ -29,7 +29,7 @@ required_env_vars = [
 missing_vars = [var for var in required_env_vars if not os.getenv(var)]
 if missing_vars:
     print(f"エラー: 以下の環境変数が設定されていません: {', '.join(missing_vars)}")
-    print("設定方法: /home/pi/autonomous_ai/.env ファイルを作成してください")
+    print("設定方法: /home/pi/autonomous_ai_BCNOFNe_system/.env ファイルを作成してください")
     sys.exit(1)
 
 # モジュールインポート
@@ -81,8 +81,8 @@ class IntegratedSystem:
         self.agent = AutonomousAgent(
             api_key=os.getenv("OPENAI_API_KEY"),
             model="gpt-4o-mini",
-            memory_dir="/home/pi/autonomous_ai/memory",
-            log_dir="/home/pi/autonomous_ai/logs"
+            memory_dir="/home/pi/autonomous_ai_BCNOFNe_system/memory",
+            log_dir="/home/pi/autonomous_ai_BCNOFNe_system/logs"
         )
         
         self.discord = DiscordNotifier(
@@ -96,12 +96,12 @@ class IntegratedSystem:
         )
         
         self.storage = StorageManager(
-            ssd_path="/home/pi/autonomous_ai",
+            ssd_path="/home/pi/autonomous_ai_BCNOFNe_system",
             hdd_path="/mnt/hdd/archive"
         )
         
         self.billing = BillingGuard(
-            data_dir="/home/pi/autonomous_ai/billing"
+            data_dir="/home/pi/autonomous_ai_BCNOFNe_system/billing"
         )
         
         # Quick Responder（質問即時回答用）
@@ -226,7 +226,7 @@ class IntegratedSystem:
     def send_startup_notifications(self):
         """起動通知を送信（重複防止付き）"""
         # 起動フラグチェック
-        startup_flag = StartupFlag("/home/pi/autonomous_ai/.startup_flag")
+        startup_flag = StartupFlag("/home/pi/autonomous_ai_BCNOFNe_system/.startup_flag")
         
         if not startup_flag.should_send_startup_notification(cooldown_minutes=5):
             print("起動通知は最近5分以内に送信済みです。スキップします。")
@@ -263,7 +263,7 @@ class IntegratedSystem:
         - 後方互換: user_commands.jsonl もサポート
         """
         # === 新形式: inbox.jsonl ===
-        inbox_file = "/home/pi/autonomous_ai/commands/inbox.jsonl"
+        inbox_file = "/home/pi/autonomous_ai_BCNOFNe_system/commands/inbox.jsonl"
         
         if os.path.exists(inbox_file):
             try:
@@ -285,7 +285,7 @@ class IntegratedSystem:
                 self.agent.log(f"インボックス処理エラー: {e}", "ERROR")
         
         # === 後方互換: user_commands.jsonl ===
-        legacy_file = "/home/pi/autonomous_ai/commands/user_commands.jsonl"
+        legacy_file = "/home/pi/autonomous_ai_BCNOFNe_system/commands/user_commands.jsonl"
         
         if os.path.exists(legacy_file):
             try:

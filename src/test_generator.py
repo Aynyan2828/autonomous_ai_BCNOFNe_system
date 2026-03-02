@@ -20,7 +20,7 @@ class TestGenerator:
         self,
         api_key: str,
         model: str = "gpt-4.1-mini",
-        test_dir: str = "/home/pi/autonomous_ai/tests"
+        test_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/tests"
     ):
         """
         初期化
@@ -310,7 +310,7 @@ def main():
     generator = TestGenerator(api_key=api_key)
     
     # テスト対象ファイル
-    test_file = Path("/home/pi/autonomous_ai/src/memory.py")
+    test_file = Path("/home/pi/autonomous_ai_BCNOFNe_system/src/memory.py")
     
     if test_file.exists():
         # テスト生成

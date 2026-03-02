@@ -16,7 +16,7 @@ import hashlib
 class MemoryManager:
     """長期記憶管理クラス"""
     
-    def __init__(self, base_dir: str = "/home/pi/autonomous_ai/memory"):
+    def __init__(self, base_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/memory"):
         """
         初期化
         

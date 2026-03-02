@@ -46,7 +46,7 @@ class BillingGuard:
     
     def __init__(
         self,
-        data_dir: str = "/home/pi/autonomous_ai/billing",
+        data_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/billing",
         start_date: Optional[str] = None
     ):
         """

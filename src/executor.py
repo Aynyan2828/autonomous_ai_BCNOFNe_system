@@ -21,12 +21,12 @@ class CommandExecutor:
     """コマンド実行クラス（安全強化）"""
 
     # ====== 設定 ======
-    DEFAULT_CWD = "/home/pi/autonomous_ai"  # 作業ディレクトリ固定（必要なら変更）
+    DEFAULT_CWD = "/home/pi/autonomous_ai_BCNOFNe_system"  # 作業ディレクトリ固定（必要なら変更）
 
     # パス操作を許可するルート（方針B：この配下だけ触ってOK）
     # ※あなたのプロジェクト実体に合わせて必要なら増やしてOK
     ALLOWED_ROOTS = [
-        "/home/pi/autonomous_ai",
+        "/home/pi/autonomous_ai_BCNOFNe_system",
         "/home/pi/autonomous_ai_BCNOFNe_system",
         "/mnt/hdd",  # エンジンデータ保存先が /mnt/hdd 配下ならここ
     ]

@@ -67,7 +67,7 @@ cat /path/to/filtered_analysis.txt
 
 **解決策**:
 - `main.py`に`check_line_commands`メソッドを追加
-- LINEから送信されたメッセージを`/home/pi/autonomous_ai/commands/user_commands.jsonl`から読み取り
+- LINEから送信されたメッセージを`/home/pi/autonomous_ai_BCNOFNe_system/commands/user_commands.jsonl`から読み取り
 - エージェントの目標（`current_goal`）を自動更新
 - 確認通知をLINEとDiscordに送信
 
@@ -88,7 +88,7 @@ cat /path/to/filtered_analysis.txt
 **解決策**:
 - `line_bot.py`に`load_dotenv()`を追加
 - `.env`ファイルのパスを自動検出
-- 代替パス（`/home/pi/autonomous_ai/.env`）もサポート
+- 代替パス（`/home/pi/autonomous_ai_BCNOFNe_system/.env`）もサポート
 
 **変更ファイル**:
 - `src/line_bot.py`
@@ -140,7 +140,7 @@ unzip autonomous_ai_system_v2_with_linebot.zip
 cd autonomous_ai_BCNOFNe_system
 
 # .envファイルをコピー（既存の設定を維持）
-cp /home/pi/autonomous_ai/.env .env
+cp /home/pi/autonomous_ai_BCNOFNe_system/.env .env
 
 # LINE Botとngrokのセットアップ
 # docs/LINE_BOT_SETUP.mdを参照

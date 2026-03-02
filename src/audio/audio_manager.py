@@ -274,7 +274,7 @@ class AudioManager:
             logger.info(f"[AudioManager] 認識: {text}")
             
             # システム全体のインボックスに送信 (LLM回答用)
-            inbox_file = "/home/pi/autonomous_ai/commands/inbox.jsonl"
+            inbox_file = "/home/pi/autonomous_ai_BCNOFNe_system/commands/inbox.jsonl"
             try:
                 import json as _json
                 event_data = {
@@ -687,7 +687,7 @@ def main():
         level=logging.INFO,
         format='[%(asctime)s] [%(levelname)s] %(name)s: %(message)s',
         handlers=[
-            logging.FileHandler("/home/pi/autonomous_ai/logs/audio.log"),
+            logging.FileHandler("/home/pi/autonomous_ai_BCNOFNe_system/logs/audio.log"),
             logging.StreamHandler(),
         ]
     )

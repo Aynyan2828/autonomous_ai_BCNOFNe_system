@@ -87,7 +87,7 @@ cd /home/pi
 unzip -o autonomous_ai_system_v2_3_line_control.zip
 
 # .envファイルを維持
-cp /home/pi/autonomous_ai/.env /home/pi/autonomous_ai_BCNOFNe_system/.env
+cp /home/pi/autonomous_ai_BCNOFNe_system/.env /home/pi/autonomous_ai_BCNOFNe_system/.env
 
 # sudoers設定をインストール
 sudo cp /home/pi/autonomous_ai_BCNOFNe_system/systemd/autonomous-ai-sudoers /etc/sudoers.d/autonomous-ai

@@ -143,7 +143,7 @@ ngrok http 5000
 
 ```bash
 # 環境変数が正しく設定されているか確認
-cat /home/pi/autonomous_ai/.env
+cat /home/pi/autonomous_ai_BCNOFNe_system/.env
 
 # 手動でLINE Botサーバーを起動してエラーを確認
 cd /home/pi/autonomous_ai_BCNOFNe_system

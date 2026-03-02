@@ -67,8 +67,8 @@ class AutonomousAgent:
         self,
         api_key: str,
         model: str = "gpt-4.1-mini",
-        memory_dir: str = "/home/pi/autonomous_ai/memory",
-        log_dir: str = "/home/pi/autonomous_ai/logs"
+        memory_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/memory",
+        log_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/logs"
     ):
         """
         初期化
@@ -461,8 +461,8 @@ if __name__ == "__main__":
     agent = AutonomousAgent(
         api_key=api_key,
         model="gpt-4.1-mini",
-        memory_dir="/home/pi/autonomous_ai/memory",
-        log_dir="/home/pi/autonomous_ai/logs"
+        memory_dir="/home/pi/autonomous_ai_BCNOFNe_system/memory",
+        log_dir="/home/pi/autonomous_ai_BCNOFNe_system/logs"
     )
     
     # 自律ループ開始

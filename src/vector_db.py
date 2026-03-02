@@ -39,7 +39,7 @@ class VectorDatabase:
     def __init__(
         self,
         db_type: str = "chromadb",
-        db_dir: str = "/home/pi/autonomous_ai/vector_db",
+        db_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/vector_db",
         api_key: Optional[str] = None,
         embedding_model: str = "text-embedding-3-small"
     ):

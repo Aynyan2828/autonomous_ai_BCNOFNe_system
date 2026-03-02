@@ -19,10 +19,10 @@ class StorageManager:
     
     def __init__(
         self,
-        ssd_path: str = "/home/pi/autonomous_ai",
+        ssd_path: str = "/home/pi/autonomous_ai_BCNOFNe_system",
         hdd_path: str = "/mnt/hdd/archive",
         access_threshold_days: int = 30,
-        config_file: str = "/home/pi/autonomous_ai/storage_config.json"
+        config_file: str = "/home/pi/autonomous_ai_BCNOFNe_system/storage_config.json"
     ):
         """
         初期化

@@ -41,7 +41,7 @@ class CalendarSync:
     """iCloudカレンダー同期"""
     
     WORK_KEYWORDS = ["仕事", "勤務", "work", "出勤", "シフト", "shift", "業務", "会議"]
-    CACHE_FILE = "/home/pi/autonomous_ai/state/calendar_cache.json"
+    CACHE_FILE = "/home/pi/autonomous_ai_BCNOFNe_system/state/calendar_cache.json"
     SYNC_INTERVAL = 900  # 15分
     
     def __init__(

@@ -64,7 +64,7 @@ unzip autonomous_ai_system_v2_2_json_fix.zip
 cd autonomous_ai_BCNOFNe_system
 
 # .envファイルをコピー（既存の設定を維持）
-cp /home/pi/autonomous_ai/.env .env
+cp /home/pi/autonomous_ai_BCNOFNe_system/.env .env
 
 # システムを再起動
 sudo systemctl daemon-reload
@@ -146,10 +146,10 @@ sudo systemctl restart autonomous-ai.service
 
 ```bash
 # コマンドファイルのパスを確認
-ls -la /home/pi/autonomous_ai/commands/
+ls -la /home/pi/autonomous_ai_BCNOFNe_system/commands/
 
 # コマンドファイルの内容を確認
-cat /home/pi/autonomous_ai/commands/user_commands.jsonl
+cat /home/pi/autonomous_ai_BCNOFNe_system/commands/user_commands.jsonl
 ```
 
 ---

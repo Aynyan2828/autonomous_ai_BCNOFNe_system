@@ -85,7 +85,7 @@ Raspberry Pi 4B上で動作する完全自律型AIエージェントシステム
 - 再起動後の記憶復元
 
 **ストレージ**:
-- `/home/pi/autonomous_ai/memory/` ディレクトリ
+- `/home/pi/autonomous_ai_BCNOFNe_system/memory/` ディレクトリ
 
 ### 3. コマンド実行エンジン (`executor.py`)
 **役割**: AIが指示したbashコマンドを安全に実行
@@ -113,7 +113,7 @@ Raspberry Pi 4B上で動作する完全自律型AIエージェントシステム
 - コスト見積もり送信
 
 **データ保存**:
-- `/home/pi/autonomous_ai/billing/usage.json`
+- `/home/pi/autonomous_ai_BCNOFNe_system/billing/usage.json`
 
 ### 5. Discord通知 (`discord_notifier.py`)
 **役割**: システム状態をDiscordに通知
@@ -162,7 +162,7 @@ Raspberry Pi 4B上で動作する完全自律型AIエージェントシステム
 - アクセス時間ベースの階層化
 
 **ストレージ構成**:
-- SSD: `/home/pi/autonomous_ai/` (高速アクセス)
+- SSD: `/home/pi/autonomous_ai_BCNOFNe_system/` (高速アクセス)
 - HDD: `/mnt/hdd/archive/` (長期保存)
 
 ### 9. systemd自動起動 (`autonomous-ai.service`)
@@ -296,8 +296,8 @@ Raspberry Pi 4B上で動作する完全自律型AIエージェントシステム
 
 ### ログ管理
 - システムログ: `/var/log/autonomous-ai/system.log`
-- 実行ログ: `/home/pi/autonomous_ai/logs/execution.log`
-- エラーログ: `/home/pi/autonomous_ai/logs/error.log`
+- 実行ログ: `/home/pi/autonomous_ai_BCNOFNe_system/logs/execution.log`
+- エラーログ: `/home/pi/autonomous_ai_BCNOFNe_system/logs/error.log`
 - ローテーション: 7日間保持
 
 ### バックアップ

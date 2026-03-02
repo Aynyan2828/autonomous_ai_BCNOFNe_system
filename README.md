@@ -134,7 +134,7 @@ autonomous_ai_system/
 # 1. プロジェクトをクローン
 git clone https://github.com/Aynyan2828/autonomous_ai_BCNOFNe_system.git
 cd autonomous_ai_BCNOFNe_system
-cd /home/pi/autonomous_ai
+cd /home/pi/autonomous_ai_BCNOFNe_system
 
 # 2. 依存パッケージをインストール
 pip3 install -r requirements.txt
@@ -212,10 +212,10 @@ journalctl -u autonomous-ai.service -f
 journalctl -u autonomous-ai.service -n 50
 
 # 環境変数が正しく設定されているか確認
-cat /home/pi/autonomous_ai/.env
+cat /home/pi/autonomous_ai_BCNOFNe_system/.env
 
 # 手動で起動してエラーを確認
-cd /home/pi/autonomous_ai/src
+cd /home/pi/autonomous_ai_BCNOFNe_system/src
 python3 main.py
 ```
 

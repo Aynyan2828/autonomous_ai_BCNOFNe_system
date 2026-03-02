@@ -18,7 +18,7 @@ from pathlib import Path
 import streamlit as st
 
 # パス設定
-BASE_DIR = "/home/pi/autonomous_ai"
+BASE_DIR = "/home/pi/autonomous_ai_BCNOFNe_system"
 AI_STATE_FILE = "/var/run/ai_state.json"
 AGENT_LOG = os.path.join(BASE_DIR, "logs", "agent.log")
 INBOX_FILE = os.path.join(BASE_DIR, "commands", "inbox.jsonl")

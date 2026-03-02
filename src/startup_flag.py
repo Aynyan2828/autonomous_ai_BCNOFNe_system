@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 class StartupFlag:
     """起動フラグ管理クラス"""
     
-    def __init__(self, flag_file: str = "/home/pi/autonomous_ai/.startup_flag"):
+    def __init__(self, flag_file: str = "/home/pi/autonomous_ai_BCNOFNe_system/.startup_flag"):
         """
         初期化
         

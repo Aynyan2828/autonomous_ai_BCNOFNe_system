@@ -21,7 +21,7 @@ if env_path.exists():
     load_dotenv(env_path)
 else:
     # 代替パスも試す
-    load_dotenv("/home/pi/autonomous_ai/.env")
+    load_dotenv("/home/pi/autonomous_ai_BCNOFNe_system/.env")
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -490,7 +490,7 @@ API使用料が閾値に達しました
             confirmation_id: 確認ID
             response: 応答（許可/拒否）
         """
-        result_file = f"/home/pi/autonomous_ai/billing/confirmations/{confirmation_id}.json"
+        result_file = f"/home/pi/autonomous_ai_BCNOFNe_system/billing/confirmations/{confirmation_id}.json"
         os.makedirs(os.path.dirname(result_file), exist_ok=True)
         
         with open(result_file, 'w', encoding='utf-8') as f:
@@ -554,7 +554,7 @@ API使用料が閾値に達しました
         }
         
         # 1) インボックスに追記（未処理キュー）
-        inbox_file = "/home/pi/autonomous_ai/commands/inbox.jsonl"
+        inbox_file = "/home/pi/autonomous_ai_BCNOFNe_system/commands/inbox.jsonl"
         os.makedirs(os.path.dirname(inbox_file), exist_ok=True)
         
         with open(inbox_file, 'a', encoding='utf-8') as f:
@@ -562,7 +562,7 @@ API使用料が閾値に達しました
         
         # 2) 永続履歴に保存
         today = datetime.now().strftime("%Y%m%d")
-        history_dir = f"/home/pi/autonomous_ai/commands/history/{today}"
+        history_dir = f"/home/pi/autonomous_ai_BCNOFNe_system/commands/history/{today}"
         os.makedirs(history_dir, exist_ok=True)
         
         event_id = str(uuid.uuid4())
@@ -683,10 +683,10 @@ API使用料が閾値に達しました
     
     # === shipOS 連携メソッド ===
     
-    SHIP_MODE_FILE = "/home/pi/autonomous_ai/state/ship_mode.json"
-    MODE_HISTORY_FILE = "/home/pi/autonomous_ai/state/mode_history.jsonl"
-    HEALTH_HISTORY_FILE = "/home/pi/autonomous_ai/state/health_history.jsonl"
-    SHIPS_LOG_DIR = "/home/pi/autonomous_ai/state/ships_log"
+    SHIP_MODE_FILE = "/home/pi/autonomous_ai_BCNOFNe_system/state/ship_mode.json"
+    MODE_HISTORY_FILE = "/home/pi/autonomous_ai_BCNOFNe_system/state/mode_history.jsonl"
+    HEALTH_HISTORY_FILE = "/home/pi/autonomous_ai_BCNOFNe_system/state/health_history.jsonl"
+    SHIPS_LOG_DIR = "/home/pi/autonomous_ai_BCNOFNe_system/state/ships_log"
     
     def _read_current_mode(self) -> dict:
         """現在のモード状態を読み取り"""

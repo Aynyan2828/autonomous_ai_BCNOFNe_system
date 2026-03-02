@@ -58,9 +58,9 @@ class SelfModifier:
         self,
         api_key: str,
         model: str = "gpt-4.1-mini",
-        source_dir: str = "/home/pi/autonomous_ai/src",
-        backup_dir: str = "/home/pi/autonomous_ai/backups",
-        log_dir: str = "/home/pi/autonomous_ai/logs"
+        source_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/src",
+        backup_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/backups",
+        log_dir: str = "/home/pi/autonomous_ai_BCNOFNe_system/logs"
     ):
         """
         初期化

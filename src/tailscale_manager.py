@@ -19,7 +19,7 @@ class TailscaleManager:
     def __init__(self):
         """初期化"""
         self.logger = logging.getLogger(__name__)
-        self.config_file = Path("/home/pi/autonomous_ai/tailscale_config.json")
+        self.config_file = Path("/home/pi/autonomous_ai_BCNOFNe_system/tailscale_config.json")
         self.config = self._load_config()
         
         self.logger.info("Tailscale管理システムを初期化しました")

@@ -46,7 +46,7 @@ sudo visudo -c -f /etc/sudoers.d/autonomous-ai
 sudo systemctl stop line-bot.service
 
 # 新しいファイルで上書き
-cp /home/pi/autonomous_ai_BCNOFNe_system/src/line_bot.py /home/pi/autonomous_ai/src/
+cp /home/pi/autonomous_ai_BCNOFNe_system/src/line_bot.py /home/pi/autonomous_ai_BCNOFNe_system/src/
 
 # LINE Botサーバーを再起動
 sudo systemctl start line-bot.service
@@ -134,7 +134,7 @@ sudo systemctl enable autonomous-ai.service
 **解決策**:
 ```bash
 # .envファイルを確認
-cat /home/pi/autonomous_ai/.env
+cat /home/pi/autonomous_ai_BCNOFNe_system/.env
 
 # 以下の変数が設定されているか確認
 # LINE_CHANNEL_ACCESS_TOKEN

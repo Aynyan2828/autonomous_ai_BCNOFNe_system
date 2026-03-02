@@ -85,7 +85,7 @@ print(result)
 #   "file": "/home/pi/Downloads/photo.jpg",
 #   "success": True,
 #   "action": "move",
-#   "destination": "/home/pi/autonomous_ai/nas/organized/images/landscape/photo.jpg",
+#   "destination": "/home/pi/autonomous_ai_BCNOFNe_system/nas/organized/images/landscape/photo.jpg",
 #   "category": "images/landscape"
 # }
 ```
@@ -170,7 +170,7 @@ AIエージェントのJSONレスポンスに追加:
 
 ```bash
 # cronで毎日午前3時に実行
-0 3 * * * python3 /home/pi/autonomous_ai/src/ai_file_organizer.py
+0 3 * * * python3 /home/pi/autonomous_ai_BCNOFNe_system/src/ai_file_organizer.py
 ```
 
 ---
@@ -262,7 +262,7 @@ tailscale_config.json          # Tailscale設定ファイル
 #### 方法1: インストールスクリプトを使用
 
 ```bash
-cd /home/pi/autonomous_ai/scripts
+cd /home/pi/autonomous_ai_BCNOFNe_system/scripts
 sudo ./install_tailscale.sh
 ```
 
@@ -418,7 +418,7 @@ def webhook():
 
 ```bash
 # cronで毎日午前3時に実行
-0 3 * * * python3 /home/pi/autonomous_ai/src/ai_file_organizer.py
+0 3 * * * python3 /home/pi/autonomous_ai_BCNOFNe_system/src/ai_file_organizer.py
 ```
 
 #### Tailscaleの自動起動
@@ -469,7 +469,7 @@ journalctl -u autonomous-ai.service -f
 
 ```bash
 # 重複ファイル記録を確認
-cat /home/pi/autonomous_ai/nas/organized/duplicates.json
+cat /home/pi/autonomous_ai_BCNOFNe_system/nas/organized/duplicates.json
 ```
 
 ### 5.2 Tailscale
