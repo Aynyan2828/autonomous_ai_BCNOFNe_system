@@ -9,6 +9,14 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+src/audio/cache/
+src/audio/audio/
+*.bak
+*.bak.*
+*.log
+__pycache__/
+*.pyc
+
 
 # logs / runtime
 logs/
