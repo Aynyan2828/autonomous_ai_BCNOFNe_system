@@ -65,13 +65,13 @@ recording:
   format: "wav"
   sample_rate: 16000
   channels: 1
-  device: "plughw:3,0"  # Sound Blaster G3
+  device: "default"     # 変更前: "plughw:3,0"
   max_duration: 30      # 最大録音秒数
   silence_timeout: 3    # 無音タイムアウト
 
 # 再生設定
 playback:
-  device: "plughw:3,0"  # Sound Blaster G3
+  device: "default"     # 変更前: "plughw:3,0"
   stereo: true          # モノラル→ステレオ変換
 
 # 音量設定
