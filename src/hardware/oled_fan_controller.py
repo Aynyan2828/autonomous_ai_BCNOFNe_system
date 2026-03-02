@@ -525,6 +525,31 @@ class OLEDFanController:
     def boot_sequence(self):
         """起動演出"""
         from time import sleep
+        import os
+        
+        # 0. bootログ開始
+        self.oled_display.show_message("===Boot===\nSystem Starting...", 0.6)
+        
+        # 1. ロゴ表示
+        logo_path = "/home/pi/autonomous_ai/oled_128x64_resize_dither.png"
+        if os.path.exists(logo_path) and hasattr(self.oled_display, 'draw_image'):
+            self.oled_display.clear_buffer()
+            self.oled_display.draw_image(logo_path)
+            self.oled_display.flush()
+            sleep(1.5)
+            
+            # 2. フェードアウト風（点滅）
+            for _ in range(3):
+                self.oled_display.clear()
+                sleep(0.08)
+                self.oled_display.clear_buffer()
+                self.oled_display.draw_image(logo_path)
+                self.oled_display.flush()
+                sleep(0.12)
+            
+            self.oled_display.clear()
+            sleep(0.3)
+
         # 演出1: engine check
         self.oled_display.show_message("===Boot===\nengine check...", 0.4)
         sleep(0.4)
