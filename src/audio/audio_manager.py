@@ -347,22 +347,33 @@ class AudioManager:
         self._adjust_volume(-self.volume_step)
     
     def _adjust_volume(self, delta: float):
-        """wpctlで音量調整"""
+        """ALSA(amixer)経由で音量調整"""
         try:
-            if delta > 0:
-                subprocess.run(
-                    ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@",
-                     f"{abs(delta):.2f}+"],
-                    timeout=3
-                )
-            else:
-                subprocess.run(
-                    ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@",
-                     f"{abs(delta):.2f}-"],
-                    timeout=3
-                )
+            device = self.config.get("playback", {}).get("device", "default")
+            # aplayなどの-D値が plughw:3,0 のような場合、カード番号を抽出
+            card_arg = []
+            if "hw:" in device or "plughw:" in device:
+                import re
+                m = re.search(r'(\d+)', device)
+                if m:
+                    card_arg = ["-c", m.group(1)]
+            
+            # MasterかSpeakerか判断が難しいため、通常はそのままのコマンドか単純に "Master" を狙う。
+            # SoundBlasterなどは "Speaker" の場合もあるが、一旦汎用的な Master とする。
+            # 引数形式: amixer -c 3 sset Master 5%+
+            step_pct = int(abs(delta) * 100)
+            sign = "+" if delta > 0 else "-"
+            
+            cmd = ["amixer"] + card_arg + ["sset", "Master", f"{step_pct}%{sign}"]
+            
+            subprocess.run(
+                cmd,
+                timeout=3,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
         except Exception as e:
-            logger.error(f"[AudioManager] 音量調整エラー: {e}")
+            logger.error(f"[AudioManager] 音量調整エラー(amixer): {e}")
             
     def _handle_voice_mode_nurse(self):
         """F19: 音声モードをNURSE固定にする"""
@@ -465,13 +476,27 @@ class AudioManager:
             
             # 音量設定
             try:
+                # wpctlではなくamixerを使用（systemdヘッドレス対策）
                 vol = min(req.volume, self.max_volume)
+                device = self.config.get("playback", {}).get("device", "default")
+                card_arg = []
+                if "hw:" in device or "plughw:" in device:
+                    import re
+                    m = re.search(r'(\d+)', device)
+                    if m:
+                        card_arg = ["-c", m.group(1)]
+                
+                vol_pct = int(vol * 100)
+                cmd = ["amixer"] + card_arg + ["sset", "Master", f"{vol_pct}%"]
+                
                 subprocess.run(
-                    ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", f"{vol:.2f}"],
-                    timeout=3
+                    cmd,
+                    timeout=3,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
                 )
             except Exception as e:
-                logger.error(f"[AudioManager] [AUDIO_DEBUG] volume wpctl error: {e}")
+                logger.error(f"[AudioManager] [AUDIO_DEBUG] volume amixer error: {e}")
             
             # ステレオ変換 + 再生
             play_path = wav_path
