@@ -9,11 +9,15 @@ input:
 
 # キー割り当て（evdevコード）
 keys:
-  talk: 189            # F19 (previously F13=183)
-  monologue_mute: 190  # F20 (previously F14=184)
-  status_read: 191     # F21 (previously F15=185)
-  logbook: 192         # F22 (previously F16=186)
-  emergency_stop: 193  # F23 (previously F17=187)
+  talk: 183            # F13
+  monologue_mute: 184  # F14
+  status_read: 185     # F15
+  logbook: 186         # F16
+  emergency_stop: 187  # F17
+  voice_mode_nurse: 189    # F19
+  voice_mode_openai: 190   # F20
+  voice_mode_hybrid: 191   # F21
+  voice_status: 192        # F22
   volume_up: 115       # KEY_VOLUMEUP
   volume_down: 114     # KEY_VOLUMEDOWN
 
