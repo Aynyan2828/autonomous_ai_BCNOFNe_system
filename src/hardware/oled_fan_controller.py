@@ -93,8 +93,8 @@ class OLEDFanController:
     LAST_TOUCH_PATH = os.path.join(STATE_DIR, "last_user_touch.txt")
     LINE_STATUS_FILE = "/tmp/shipos_line_status.json"
 
-    # 更新間隔
-    OLED_UPDATE_INTERVAL = 0.12  # 少し高速化
+    # 更新間隔 (環境変数 OLED_SCROLL_SPEED から取得、デフォルト 0.10秒 で以前より約20%高速)
+    OLED_UPDATE_INTERVAL = float(os.getenv("OLED_SCROLL_SPEED", "0.10"))
     SYS_UPDATE_INTERVAL = 2.0
     FAN_UPDATE_INTERVAL = 5.0
     AI_STATE_CHECK_INTERVAL = 1.0
@@ -243,9 +243,10 @@ class OLEDFanController:
             with open(self.LINE_STATUS_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
             
-            # 5秒以内のステータスのみ有効
+            # 定義されたTTL (デフォルト3秒) 以内のステータスのみ有効
+            ttl = float(os.getenv("LINE_STATUS_TTL", "3.0"))
             ts = data.get("timestamp", 0.0)
-            if time.time() - ts <= 5.0:
+            if time.time() - ts <= ttl:
                 direction = data.get("direction", "")
                 if direction == "RX":
                     return " [LINE: RX] "
@@ -524,15 +525,36 @@ class OLEDFanController:
     def boot_sequence(self):
         """起動演出"""
         from time import sleep
-        self.oled_display.show_message("===Boot===\nengine check", 0.5)
+        # 演出1: engine check
+        self.oled_display.show_message("===Boot===\nengine check...", 0.4)
+        sleep(0.4)
+        self.oled_display.show_message("===Boot===\nengine check... OK", 0.2)
+        sleep(0.2)
+        
+        # 演出2: comms check
+        self.oled_display.show_message("===Boot===\ncomms check...", 0.4)
+        sleep(0.4)
+        self.oled_display.show_message("===Boot===\ncomms check... OK", 0.2)
+        sleep(0.2)
+        
+        # 演出3: storage check
+        self.oled_display.show_message("===Boot===\nstorage check...", 0.4)
+        sleep(0.4)
+        self.oled_display.show_message("===Boot===\nstorage check... OK", 0.2)
+        sleep(0.2)
+        
+        # 演出4: audio check
+        self.oled_display.show_message("===Boot===\naudio check...", 0.4)
+        sleep(0.4)
+        self.oled_display.show_message("===Boot===\naudio check... OK", 0.2)
+        sleep(0.2)
+
+        # 演出5: DIAG
+        self.oled_display.show_message("=DIAG=\nAI modules...ok", 0.5)
         sleep(0.5)
-        self.oled_display.show_message("===Boot===\ncomms check", 0.5)
+        self.oled_display.show_message("=DIAG=\nAI modules...ok\nSSD...ok", 0.5)
         sleep(0.5)
-        self.oled_display.show_message("===Boot===\nstorage check", 0.5)
-        sleep(0.5)
-        self.oled_display.show_message("===Boot===\naudio check", 0.5)
-        sleep(0.5)
-        self.oled_display.show_message("=DIAG=\nAI modules...ok\nSSD...ok\nHDD...ok", 1.5)
+        self.oled_display.show_message("=DIAG=\nAI modules...ok\nSSD...ok\nHDD...ok", 1.0)
         sleep(1.0)
 
     def run(self):
@@ -584,9 +606,9 @@ class OLEDFanController:
     def cleanup(self):
         """クリーンアップ"""
         self.logger.info("投錨。全機関停止...")
-        self.oled_display.show_message(" \nANCHOR DROPPED...\nALL STOP.", 1.5)
+        self.oled_display.show_message(" \nANCHOR DOWN...\nSYSTEM HALT", 1.5)
         time.sleep(1.5)
-        self.oled_display.show_message(" \nSEE YOU,\n MASTER.", 1.5)
+        self.oled_display.show_message(" \nSAFE POWER OFF\nSEE YOU, MASTER.", 1.5)
         time.sleep(1.5)
         self.oled_display.clear()
         self.fan_controller.cleanup()
