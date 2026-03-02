@@ -110,16 +110,19 @@ class InputListener:
             "voice_status": (Action.VOICE_STATUS, None),
         }
         
-        new_map = {}
-        for name, code in key_config.items():
+        for name, new_code in key_config.items():
             if name in config_to_action:
                 press, release = config_to_action[name]
-                new_map[code] = (name, press, release)
-        
-        if new_map:
-            # key_mapの既存のマッピングを保持しつつ、config.yaml分を上書きする
-            self.key_map.update(new_map)
-    
+                
+                # 古いマッピングを削除して新しいものに置き換える
+                # 同じアクション(`name`)を持つ古いキーを探して消去
+                keys_to_delete = [k for k, v in self.key_map.items() if v[0] == name]
+                for k in keys_to_delete:
+                    self.key_map.pop(k, None)
+                
+                # 新しいマッピングを追加
+                self.key_map[new_code] = (name, press, release)
+
     def start(self):
         """リスニング開始（バックグラウンドスレッド）"""
         if not EVDEV_AVAILABLE:

@@ -248,13 +248,17 @@ def create_tts_engine(config: dict) -> TTSEngine:
     engine_type = config.get("engine", "piper")
     
     cfg_p = config.get("piper", {})
-    local_tts = PiperTTS(
-        binary=cfg_p.get("binary", "/home/pi/piper/piper"),
-        model=cfg_p.get("model", "/home/pi/piper/ja_JP-takumi-medium.onnx"),
-        config=cfg_p.get("config", ""),
-        speed=cfg_p.get("speed", 1.0),
-        speaker_id=cfg_p.get("speaker_id", 0),
-    )
+    local_tts = None
+    try:
+        local_tts = PiperTTS(
+            binary=cfg_p.get("binary", "/home/pi/piper/piper"),
+            model=cfg_p.get("model", "/home/pi/piper/ja_JP-takumi-medium.onnx"),
+            config=cfg_p.get("config", ""),
+            speed=cfg_p.get("speed", 1.0),
+            speaker_id=cfg_p.get("speaker_id", 0),
+        )
+    except Exception as e:
+        logger.error(f"[TTS] ナースロボ(Piper)の初期化に失敗しました。OpenAIにフォールバックします: {e}")
     
     cfg_o = config.get("openai_tts", {})
     cloud_tts = OpenAITTS(
@@ -263,12 +267,18 @@ def create_tts_engine(config: dict) -> TTSEngine:
     )
     
     if engine_type == "hybrid":
-        return HybridTTS(local_tts, cloud_tts)
+        if local_tts:
+            return HybridTTS(local_tts, cloud_tts)
+        else:
+            return cloud_tts
     elif engine_type == "openai_tts":
         return cloud_tts
     else:
         # デフォルトまたはpiper指定時はそのまま返すもよし、
         # 強制的にHybridにしておき設定でModeを縛る運用でもよい。
         # 要件に合わせてハイブリッドを返す
-        return HybridTTS(local_tts, cloud_tts)
+        if local_tts:
+            return HybridTTS(local_tts, cloud_tts)
+        else:
+            return cloud_tts
 

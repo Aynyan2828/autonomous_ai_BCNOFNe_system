@@ -555,16 +555,6 @@ class IntegratedSystem:
         
         # OLED起動テロップ + 自己診断 (ハードウェアサービス側に移行)
         if self.oled:
-            # self.oled.show_startup_telop()
-            # diag_results = self.oled.run_diagnostics()
-            pass
-            # 診断結果をログ
-            for item, ok in diag_results.items():
-                status = "✅ OK" if ok else "❌ FAIL"
-                self.agent.log(f"自己診断 [{item}]: {status}", "INFO")
-                if not ok:
-                    # 重大問題はLINEに通知
-                    self.line.send_status(f"[!] 起動診断失敗: {item}")
             self.oled.set_running()
         
         # 起動通知
