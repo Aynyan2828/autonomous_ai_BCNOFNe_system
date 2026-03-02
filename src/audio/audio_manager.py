@@ -59,11 +59,12 @@ class Priority(Enum):
 class SpeakRequest:
     """再生リクエスト"""
     def __init__(self, text: str, priority: Priority, volume: float = 0.7,
-                 category: str = "general"):
+                 category: str = "general", speaker_id: int = None):
         self.text = text
         self.priority = priority
         self.volume = volume
         self.category = category
+        self.speaker_id = speaker_id
 
 
 class AudioManager:
@@ -376,7 +377,20 @@ class AudioManager:
             os.close(fd)
             
             logger.info(f"[AudioManager] [AUDIO_DEBUG] synthesizing TTS -> {wav_path}")
-            success = self.tts.synthesize(req.text, wav_path)
+            
+            # 音声バリエーションの指定（Voicevoxのみ対応）
+            try:
+                if hasattr(self.tts, 'speaker_id') and req.speaker_id is not None:
+                    original_id = self.tts.speaker_id
+                    self.tts.speaker_id = req.speaker_id
+                    success = self.tts.synthesize(req.text, wav_path)
+                    self.tts.speaker_id = original_id
+                else:
+                    success = self.tts.synthesize(req.text, wav_path)
+            except Exception as e:
+                logger.error(f"[AudioManager] [AUDIO_DEBUG] synthesize method error: {e}")
+                success = False
+                
             if not success:
                 logger.error("[AudioManager] [AUDIO_DEBUG] TTS合成失敗")
                 self._set_state(AudioState.IDLE)
@@ -528,10 +542,20 @@ class AudioManager:
         
         elif action == "change_voice":
             voice = params.get("voice", "nova")
-            if self.tts and hasattr(self.tts, 'voice'):
-                self.tts.voice = voice
-                self.speak(f"声を{voice}に変えたよ", Priority.NOTIFICATION, self.notification_volume)
-                logger.info(f"[LINE CMD] 声変更: {voice}")
+            if self.tts:
+                try:
+                    # 数値ならVoicevox/Piper用
+                    speaker_id = int(voice)
+                    if hasattr(self.tts, 'speaker_id'):
+                        self.tts.speaker_id = speaker_id
+                        self.speak(f"声を変更しました", Priority.NOTIFICATION, self.notification_volume)
+                        logger.info(f"[LINE CMD] 声変更 (ID): {speaker_id}")
+                except ValueError:
+                    # 文字列ならOpenAI用等
+                    if hasattr(self.tts, 'voice'):
+                        self.tts.voice = voice
+                        self.speak(f"声を{voice}に変えたよ", Priority.NOTIFICATION, self.notification_volume)
+                        logger.info(f"[LINE CMD] 声変更 (Name): {voice}")
     
     # ========== ライフサイクル ==========
     

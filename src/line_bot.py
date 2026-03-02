@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -848,6 +847,9 @@ class LINEBot:
         # LINE実行ログ送信フラグ（デフォルトOFF）
         self.exec_log_enabled = os.getenv("LINE_EXEC_LOG_ENABLED", "false").lower() == "true"
         self._exec_log_timeout = None  # 一時有効化のタイムアウト
+        
+        # 音声読み上げフラグ
+        self.voice_reply_enabled = os.getenv("LINE_VOICE_REPLY_ENABLED", "true").lower() == "true"
 
     def _write_line_status(self, direction: str):
         """OLEDコントローラー向けにIPC経由で送受信状態を通知"""
@@ -883,6 +885,13 @@ class LINEBot:
                 target,
                 TextSendMessage(text=message)
             )
+            
+            # 音声読み上げ連携
+            if self.voice_reply_enabled and target == self.target_user_id:
+                # ユーザー宛の通知だけ読み上げる
+                clean_text = self._clean_for_speech(message)
+                if clean_text:
+                    self._audio_command("speak", {"text": clean_text})
             
             return True
             
@@ -1415,6 +1424,22 @@ API使用料が閾値に達しました
         # 新しいイベント方式で保存
         self._save_event("goal", command, user_id)
     
+    def _clean_for_speech(self, text: str) -> str:
+        """
+        読み上げ用にテキストをクリーニングする
+        - 絵文字や記号を削除/置換
+        - URLや長すぎるテキストの省略
+        """
+        import re
+        # 簡単な記号の除去
+        text = re.sub(r'[⚠️✅❌⏹️🚀🗣️🔊🔇📊🔄🏥📔💬🧠💰🚨🛑]', '', text)
+        text = text.replace("===", "").replace("---", "")
+        # \nを句点に変換
+        text = text.replace("\n", "。")
+        # 連続す句点を一つに
+        text = re.sub(r'。+', '。', text)
+        return text.strip()
+
     def _stop_ai_service(self) -> str:
         """
         AIエージェントサービスを停止
@@ -1652,4 +1677,3 @@ if __name__ == "__main__":
     
     # Webhookサーバー起動
     bot.run_webhook_server(host="0.0.0.0", port=5000)
->>>>>>> Stashed changes

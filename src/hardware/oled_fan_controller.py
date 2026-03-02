@@ -218,6 +218,20 @@ class OLEDFanController:
         self.current_ai_task = ai_data.get("task", "") or ""
         self.current_ship_mode = self.read_ship_mode()
 
+    def is_ai_service_active(self) -> bool:
+        """systemctl APIでAIエージェントの生存確認"""
+        try:
+            result = subprocess.run(
+                ["systemctl", "is-active", "autonomous-ai.service"],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            return result.stdout.strip() == "active"
+        except Exception as e:
+            self.logger.debug(f"AI service status check failed: {e}")
+            return False
+
     def _force_mode(self, mode: str, reason: str):
         """設定ファイルに直接モードを書き込む（緊急用）"""
         try:
@@ -481,6 +495,17 @@ class OLEDFanController:
             return
 
         self.last_oled_update = current_time
+
+        # 生存確認（AI OFFLINE / AT ANCHOR の割り込み描画）
+        if not self.is_ai_service_active():
+            self.oled_display.render_lines([
+                "==== shipOS ====",
+                "[ AT ANCHOR ]",
+                "",
+                "AI OFFLINE",
+                "System Waiting..."
+            ])
+            return
 
         # キャッシュから情報取得
         mode_disp = SHIP_MODE_DISPLAY.get(self.current_ship_mode, "SAIL")
