@@ -379,18 +379,21 @@ class AudioManager:
         """F19: 音声モードをNURSE固定にする"""
         if hasattr(self.tts, 'mode'):
             self.tts.mode = "NURSE"
+            self._write_state()
             self.speak("ナースロボ固定モードに切り替わったよ", Priority.NOTIFICATION, self.conversation_volume)
 
     def _handle_voice_mode_openai(self):
         """F20: 音声モードをOPENAI固定にする"""
         if hasattr(self.tts, 'mode'):
             self.tts.mode = "OPENAI"
+            self._write_state()
             self.speak("予備の音声エンジンに切り替えました", Priority.NOTIFICATION, self.conversation_volume)
 
     def _handle_voice_mode_hybrid(self):
         """F21: 音声モードをHYBRIDにする"""
         if hasattr(self.tts, 'mode'):
             self.tts.mode = "HYBRID"
+            self._write_state()
             self.speak("ハイブリッドモードに戻ったよ", Priority.NOTIFICATION, self.conversation_volume)
             
     def _handle_voice_status(self):
