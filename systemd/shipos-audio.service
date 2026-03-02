@@ -9,9 +9,6 @@ User=pi
 Group=pi
 WorkingDirectory=/home/pi/autonomous_ai_BCNOFNe_system/src
 EnvironmentFile=/home/pi/autonomous_ai_BCNOFNe_system/.env
-Environment="XDG_RUNTIME_DIR=/run/user/1000"
-Environment="PULSE_SERVER=unix:/run/user/1000/pulse/native"
-Environment="PIPEWIRE_RUNTIME_DIR=/run/user/1000"
 
 ExecStart=/home/pi/autonomous_ai_BCNOFNe_system/venv/bin/python3 -m audio.audio_manager
 Restart=on-failure

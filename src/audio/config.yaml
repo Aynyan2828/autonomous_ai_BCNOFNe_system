@@ -3,14 +3,14 @@
 
 # 入力デバイス（USBマクロパッド）
 input:
-  device_path: "/dev/input/event13"  # input-remapper USB Composite Device Keyboard forwarded
+  device_path: "/dev/input/event14"  # input-remapper USB Composite Device Keyboard forwarded
   device_name: "USB Composite Device" # デバイス名による自動検出（パスが変動する場合のフォールバック）
   mode: "push_to_talk"   # "push_to_talk" or "toggle"
 
 # キー割り当て（evdevコード）
 keys:
   talk: 183            # F13
-  monologue_mute: 184  # F14
+  monologue_mute: 113  # MUTE (previously F14=184)
   status_read: 185     # F15
   logbook: 186         # F16
   emergency_stop: 187  # F17
