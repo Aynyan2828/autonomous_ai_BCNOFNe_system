@@ -684,13 +684,13 @@ class AudioManager:
         threading.Thread(target=self._line_cmd_worker, daemon=True).start()
         
         logger.info("[AudioManager] [AUDIO_DEBUG] AudioManager Started Successfully.")
-        self.speak("あゆにゃん起動。おはよう、マスター", Priority.NOTIFICATION, self.notification_volume)
+        self.speak("あゆにゃん起動したばい。おはよう、マスター", Priority.NOTIFICATION, self.notification_volume)
     
     def stop(self):
         """AudioManager停止"""
         # シャットダウン時の音声演出
         logger.info("[AudioManager] シャットダウンシーケンス開始（音声再生待機）")
-        self.speak("本日の航海を終了します。お疲れ様でした、マスター", Priority.EMERGENCY, self.notification_volume)
+        self.speak("本日の航海ばおしまいにするけんね。お疲れ様、マスター", Priority.EMERGENCY, self.notification_volume)
         
         # キューが空になるまで待機（最大10秒）
         wait_start = time.time()
