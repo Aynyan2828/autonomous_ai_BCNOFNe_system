@@ -123,10 +123,63 @@ class OpenAITTS(TTSEngine):
             return False
 
 
+class VoicevoxTTS(TTSEngine):
+    """Voicevox TTS ローカル音声合成"""
+    
+    def __init__(self, core_dir: str, speaker_id: int = 47, speed: float = 1.0):
+        self.core_dir = core_dir
+        self.speaker_id = speaker_id
+        self.default_speed = speed
+        self._synth = None
+        
+        if not os.path.exists(core_dir):
+            raise FileNotFoundError(f"Voicevox core dir not found: {core_dir}")
+            
+        try:
+            from voicevox_core.blocking import Onnxruntime, OpenJtalk, Synthesizer, VoiceModelFile
+            import glob
+            
+            logger.info("[TTS] VOICEVOX 初期化中...")
+            ort_libs = glob.glob(os.path.join(self.core_dir, "onnxruntime", "lib", "libvoicevox_onnxruntime*"))
+            if not ort_libs:
+                raise FileNotFoundError("onnxruntime lib not found")
+                
+            ort = Onnxruntime.load_once(filename=ort_libs[0])
+            ojt = OpenJtalk(os.path.join(self.core_dir, "dict", "open_jtalk_dic_utf_8-1.11"))
+            self._synth = Synthesizer(ort, ojt)
+            
+            for vvm in glob.glob(os.path.join(self.core_dir, "models", "vvms", "*.vvm")):
+                self._synth.load_voice_model(VoiceModelFile.open(vvm))
+                
+            logger.info("[TTS] VOICEVOX 初期化完了")
+        except Exception as e:
+            logger.error(f"[TTS] Voicevox 初期化エラー: {e}")
+            raise
+
+    def synthesize(self, text: str, output_path: str, speed: float = 1.0) -> bool:
+        """Voicevoxでテキスト→WAV生成"""
+        start = time.time()
+        try:
+            if not self._synth:
+                return False
+                
+            wav = self._synth.tts(text, style_id=self.speaker_id)
+            with open(output_path, 'wb') as f:
+                f.write(wav)
+                
+            elapsed = time.time() - start
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                logger.info(f"[TTS] Voicevox 合成完了: {elapsed:.1f}秒")
+                return True
+            return False
+            
+        except Exception as e:
+            logger.error(f"[TTS] Voicevox エラー: {e}")
+            return False
 class HybridTTS(TTSEngine):
     """ハイブリッドTTS（ローカル優先＋クラウドフォールバック＋キャッシュ対応）"""
     
-    def __init__(self, local_tts: PiperTTS, cloud_tts: OpenAITTS):
+    def __init__(self, local_tts: TTSEngine, cloud_tts: TTSEngine):
         self.local_tts = local_tts
         self.cloud_tts = cloud_tts
         self.mode = "HYBRID"  # "NURSE", "OPENAI", "HYBRID"
@@ -245,20 +298,35 @@ class HybridTTS(TTSEngine):
 
 def create_tts_engine(config: dict) -> TTSEngine:
     """設定からTTSエンジンを生成"""
-    engine_type = config.get("engine", "piper")
+    engine_type = config.get("engine", "voicevox")
     
-    cfg_p = config.get("piper", {})
     local_tts = None
-    try:
-        local_tts = PiperTTS(
-            binary=cfg_p.get("binary", "/home/pi/piper/piper"),
-            model=cfg_p.get("model", "/home/pi/piper/ja_JP-takumi-medium.onnx"),
-            config=cfg_p.get("config", ""),
-            speed=cfg_p.get("speed", 1.0),
-            speaker_id=cfg_p.get("speaker_id", 0),
-        )
-    except Exception as e:
-        logger.error(f"[TTS] ナースロボ(Piper)の初期化に失敗しました。OpenAIにフォールバックします: {e}")
+    
+    # 1. Voicevoxの読み込み判定 (優先)
+    if "voicevox" in config and engine_type in ("voicevox", "hybrid"):
+        cfg_v = config.get("voicevox", {})
+        try:
+            local_tts = VoicevoxTTS(
+                core_dir=cfg_v.get("core_dir", "/home/pi/voicevox/voicevox_core"),
+                speaker_id=cfg_v.get("speaker_id", 47),
+                speed=cfg_v.get("speed", 1.0),
+            )
+        except Exception as e:
+            logger.error(f"[TTS] Voicevoxの初期化失敗: {e}")
+            
+    # 2. Piperの読み込み判定 (Voicevox未指定または失敗時フォールバック)
+    if not local_tts and "piper" in config and engine_type in ("piper", "hybrid"):
+        cfg_p = config.get("piper", {})
+        try:
+            local_tts = PiperTTS(
+                binary=cfg_p.get("binary", "/home/pi/piper/piper"),
+                model=cfg_p.get("model", "/home/pi/piper/ja_JP-takumi-medium.onnx"),
+                config=cfg_p.get("config", ""),
+                speed=cfg_p.get("speed", 1.0),
+                speaker_id=cfg_p.get("speaker_id", 0),
+            )
+        except Exception as e:
+            logger.error(f"[TTS] Piperの初期化失敗: {e}")
     
     cfg_o = config.get("openai_tts", {})
     cloud_tts = OpenAITTS(
@@ -270,15 +338,14 @@ def create_tts_engine(config: dict) -> TTSEngine:
         if local_tts:
             return HybridTTS(local_tts, cloud_tts)
         else:
+            logger.error("[TTS] Local TTS load failed for Hybrid. Falling back to OpenAI alone.")
             return cloud_tts
     elif engine_type == "openai_tts":
         return cloud_tts
+    elif engine_type == "piper" or engine_type == "voicevox":
+        return local_tts if local_tts else cloud_tts
     else:
-        # デフォルトまたはpiper指定時はそのまま返すもよし、
-        # 強制的にHybridにしておき設定でModeを縛る運用でもよい。
-        # 要件に合わせてハイブリッドを返す
         if local_tts:
             return HybridTTS(local_tts, cloud_tts)
-        else:
-            return cloud_tts
+        return cloud_tts
 
