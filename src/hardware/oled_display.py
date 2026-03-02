@@ -169,6 +169,22 @@ class OLEDDisplay:
         if self.draw:
             self.draw.rectangle((x0, y0, x1, y1), outline=outline, fill=fill)
 
+    def draw_image(self, image_path: str):
+        """指定パスの画像(128x64)を描画バッファ全体に配置（バッファのみ）"""
+        if self.draw and self.image:
+            try:
+                import os
+                if not os.path.exists(image_path):
+                    logger.warning(f"画像が見つかりません: {image_path}")
+                    return
+                # Imageはトップレベルでimport済み
+                img = Image.open(image_path).convert("1")
+                if img.size != (self.WIDTH, self.HEIGHT):
+                    img = img.resize((self.WIDTH, self.HEIGHT))
+                self.image.paste(img, (0, 0))
+            except Exception as e:
+                logger.error(f"画像描画エラー {image_path}: {e}")
+
     # ========== 高レベル描画ヘルパー ==========
 
     def render_lines(self, lines: List[str]):
