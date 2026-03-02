@@ -117,7 +117,8 @@ class InputListener:
                 new_map[code] = (name, press, release)
         
         if new_map:
-            self.key_map = new_map
+            # key_mapの既存のマッピングを保持しつつ、config.yaml分を上書きする
+            self.key_map.update(new_map)
     
     def start(self):
         """リスニング開始（バックグラウンドスレッド）"""

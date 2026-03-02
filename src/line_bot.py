@@ -584,6 +584,21 @@ API使用料が閾値に達しました
         """
         # 新しいイベント方式で保存
         self._save_event("goal", command, user_id)
+        
+    def _send_audio_cmd(self, action: str, params: dict):
+        """AudioManagerに音声コマンドを送信"""
+        try:
+            import time
+            cmd = {
+                "action": action,
+                "params": params,
+                "timestamp": str(time.time()),
+                "source": "line"
+            }
+            with open("/tmp/shipos_audio_cmd.json", "w", encoding="utf-8") as f:
+                json.dump(cmd, f, ensure_ascii=False)
+        except Exception as e:
+            print(f"音声コマンド送信エラー: {e}")
     
     def _stop_ai_service(self) -> str:
         """
