@@ -688,10 +688,23 @@ class AudioManager:
     
     def stop(self):
         """AudioManager停止"""
+        # シャットダウン時の音声演出
+        logger.info("[AudioManager] シャットダウンシーケンス開始（音声再生待機）")
+        self.speak("本日の航海を終了します。お疲れ様でした、マスター", Priority.EMERGENCY, self.notification_volume)
+        
+        # キューが空になるまで待機（最大10秒）
+        wait_start = time.time()
+        while not self._speak_queue.empty() and (time.time() - wait_start) < 10.0:
+            time.sleep(0.5)
+            
+        # 現在再生中の音声が完了するまでロック取得で待機
+        with self._speak_lock:
+            pass
+            
         self._running = False
         if self.listener:
             self.listener.stop()
-        logger.info("[AudioManager] 停止")
+        logger.info("[AudioManager] 停止完了")
     
     def run_forever(self):
         """永久ループ（systemd用）"""
