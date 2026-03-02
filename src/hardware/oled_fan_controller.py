@@ -82,7 +82,7 @@ class OLEDFanController:
     """shipOS OLED・ファン制御統合クラス"""
 
     # AI状態ファイル
-    AI_STATE_FILE = "/var/run/ai_state.json"
+    AI_STATE_FILE = "/tmp/shipos_ai_state.json"
 
     # shipOSモード状態ファイル
     SHIP_MODE_FILE = "/home/pi/autonomous_ai/state/ship_mode.json"
@@ -192,7 +192,7 @@ class OLEDFanController:
             return {"state": "Idle", "task": "", "timestamp": ""}
         except Exception as e:
             self.logger.error(f"AI状態読み込みエラー: {e}")
-            return {"state": "Error", "task": "", "timestamp": ""}
+            return {"ai_status": "error", "goal": "Error reading state"}
 
     def read_ship_mode(self) -> str:
         """shipOSモードを読み込み"""
@@ -215,8 +215,9 @@ class OLEDFanController:
         self.last_ai_state_check = current_time
 
         ai_data = self.read_ai_state()
-        self.current_ai_state = ai_data.get("state", "Idle") or "Idle"
-        self.current_ai_task = ai_data.get("task", "") or ""
+        self.current_ai_state = ai_data.get("ai_status", "idle") or "idle"
+        self.current_ai_task = ai_data.get("goal", "") or ""
+        self.current_voice_mode = ai_data.get("voice_mode", "HYB") or "HYB"
         self.current_ship_mode = self.read_ship_mode()
 
     def is_ai_service_active(self) -> bool:

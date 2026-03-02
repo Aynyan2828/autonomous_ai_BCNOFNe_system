@@ -181,7 +181,7 @@ class AudioManager:
                 
             # もし `ai_state.json` もあれば、そこに `voice_mode` を追記する
             # oled_fan_controller は基本 `ai_state.json` から読むため。
-            AI_STATE_FILE = "/var/run/ai_state.json"
+            AI_STATE_FILE = "/tmp/shipos_ai_state.json"
             if os.path.exists(AI_STATE_FILE):
                 with open(AI_STATE_FILE, "r", encoding="utf-8") as as_f:
                      as_data = json.load(as_f)
