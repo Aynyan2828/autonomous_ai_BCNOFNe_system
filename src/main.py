@@ -63,12 +63,11 @@ try:
 except ImportError:
     SCHEDULER_AVAILABLE = False
 
-# try:
-#     from oled_status import OLEDStatus
-#     OLED_ENABLED = True
-# except ImportError:
-#     OLED_ENABLED = False
-OLED_ENABLED = False
+try:
+    from oled_status import OLEDStatus
+    OLED_ENABLED = True
+except ImportError:
+    OLED_ENABLED = False
 
 
 class IntegratedSystem:
@@ -340,6 +339,8 @@ class IntegratedSystem:
         """Individual event processing with system status and cleanup support"""
         event_type = event.get("type", "goal")
         text = event.get("text", "")
+        uid = event.get("user_id", "")
+        is_voice = (uid == "voice_ctrl")
         
         if not text:
             return
@@ -348,27 +349,32 @@ class IntegratedSystem:
         if "システムの状態" in text or "システム、報告" in text or "ステータス教えて" in text:
             from audio.system_status import get_system_status_text
             status_text = get_system_status_text()
-            self.line.send_message(f"[STAT] システムステータスばい：\n{status_text}")
+            if not is_voice:
+                self.line.send_message(f"[STAT] システムステータスばい：\n{status_text}")
             self._send_audio_cmd("speak", {"text": status_text})
             return
 
         if text.startswith("/cleanup") or "整理して" in text:
             dry_run = "dry" in text
-            self.line.send_message(f"[CLEAN] 整理を開始するばい... (dry_run={dry_run})")
+            if not is_voice:
+                self.line.send_message(f"[CLEAN] 整理を開始するばい... (dry_run={dry_run})")
             result = self.storage.archive_old_files(dry_run=dry_run)
             msg = f"[OK] 整理完了！\n移動: {result['moved_files']}件\n解放サイズ: {result['total_size']//1024//1024}MB"
-            self.line.send_message(msg)
+            if not is_voice:
+                self.line.send_message(msg)
             self._send_audio_cmd("speak", {"text": "ストレージの整理が終わったよ、マスター。"})
             return
 
         if event_type == "query":
             # === 質問 → QuickResponder で即時回答 ===
             self.agent.log(f"USER_QUERY受信: {text}", "INFO")
-            self.line.send_status("( ..)phi 思考中...")
+            if not is_voice:
+                self.line.send_status("( ..)phi 思考中...")
             
             try:
                 answer = self.quick_responder.respond(text)
-                self.line.send_message(f"<< {answer}")
+                if not is_voice:
+                    self.line.send_message(f"<< {answer}")
                 self.agent.log(f"質問回答完了: {text[:30]}...", "INFO")
                 # 回答を音声で読み上げ（最優先）
                 self._send_audio_cmd("speak", {"text": answer[:200]})
@@ -378,13 +384,18 @@ class IntegratedSystem:
                     pass
             except Exception as e:
                 self.agent.log(f"質問回答エラー: {e}", "ERROR")
-                self.line.send_message("[!] 回答の生成中にエラーが発生したばい。")
+                if not is_voice:
+                    self.line.send_message("[!] 回答の生成中にエラーが発生したばい。")
+                else:
+                    self._send_audio_cmd("speak", {"text": "ごめん、ちょっとエラーが起きたばい"})
         
         elif event_type == "goal":
             # === 目標 → エージェントの目標を更新 ===
             self.agent.log(f"USER_GOAL受信: {text}", "INFO")
             self.agent.update_goal(text, source="user")
-            self.line.send_status(f"[OK] 目標を設定したばい:\n{text}")
+            
+            if not is_voice:
+                self.line.send_status(f"[OK] 目標を設定したばい:\n{text}")
             # 音声で通知
             self._send_audio_cmd("speak", {"text": f"マスター、了解ばい。{text[:50]}、やっておくね。"})
             try:
