@@ -32,6 +32,11 @@ class Action:
     EMERGENCY_STOP = "emergency_stop"
     VOLUME_UP = "volume_up"
     VOLUME_DOWN = "volume_down"
+    
+    VOICE_MODE_NURSE = "voice_mode_nurse"
+    VOICE_MODE_OPENAI = "voice_mode_openai"
+    VOICE_MODE_HYBRID = "voice_mode_hybrid"
+    VOICE_STATUS = "voice_status"
 
 
 class InputListener:
@@ -45,6 +50,10 @@ class InputListener:
         187: ("emergency_stop", Action.EMERGENCY_STOP, None),     # F17
         115: ("volume_up", Action.VOLUME_UP, None),               # KEY_VOLUMEUP
         114: ("volume_down", Action.VOLUME_DOWN, None),           # KEY_VOLUMEDOWN
+        189: ("voice_mode_nurse", Action.VOICE_MODE_NURSE, None),   # F19
+        190: ("voice_mode_openai", Action.VOICE_MODE_OPENAI, None), # F20
+        191: ("voice_mode_hybrid", Action.VOICE_MODE_HYBRID, None), # F21
+        192: ("voice_status", Action.VOICE_STATUS, None),           # F22
     }
     
     def __init__(self, device_path: str = "/dev/input/event12",
@@ -95,6 +104,10 @@ class InputListener:
             "emergency_stop": (Action.EMERGENCY_STOP, None),
             "volume_up": (Action.VOLUME_UP, None),
             "volume_down": (Action.VOLUME_DOWN, None),
+            "voice_mode_nurse": (Action.VOICE_MODE_NURSE, None),
+            "voice_mode_openai": (Action.VOICE_MODE_OPENAI, None),
+            "voice_mode_hybrid": (Action.VOICE_MODE_HYBRID, None),
+            "voice_status": (Action.VOICE_STATUS, None),
         }
         
         new_map = {}

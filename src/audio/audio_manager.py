@@ -169,8 +169,26 @@ class AudioManager:
         """状態をファイルに書き出し（OLED/GUI連携用）"""
         try:
             import json
+            mode = "HYB"
+            if hasattr(self.tts, 'mode'):
+                mode = self.tts.mode
+
             with open(self.ai_audio_state_file, 'w') as f:
-                json.dump({"state": self.state.value}, f)
+                json.dump({
+                    "state": self.state.value,
+                    "voice_mode": mode
+                }, f)
+                
+            # もし `ai_state.json` もあれば、そこに `voice_mode` を追記する
+            # oled_fan_controller は基本 `ai_state.json` から読むため。
+            AI_STATE_FILE = "/var/run/ai_state.json"
+            if os.path.exists(AI_STATE_FILE):
+                with open(AI_STATE_FILE, "r", encoding="utf-8") as as_f:
+                     as_data = json.load(as_f)
+                as_data["voice_mode"] = mode
+                with open(AI_STATE_FILE, "w", encoding="utf-8") as as_f:
+                     json.dump(as_data, as_f, ensure_ascii=False)
+                     
         except Exception:
             pass
     
@@ -188,6 +206,10 @@ class AudioManager:
             Action.EMERGENCY_STOP: self._handle_emergency_stop,
             Action.VOLUME_UP: self._handle_volume_up,
             Action.VOLUME_DOWN: self._handle_volume_down,
+            Action.VOICE_MODE_NURSE: self._handle_voice_mode_nurse,
+            Action.VOICE_MODE_OPENAI: self._handle_voice_mode_openai,
+            Action.VOICE_MODE_HYBRID: self._handle_voice_mode_hybrid,
+            Action.VOICE_STATUS: self._handle_voice_status,
         }
         handler = handlers.get(action)
         if handler:
@@ -341,7 +363,38 @@ class AudioManager:
                 )
         except Exception as e:
             logger.error(f"[AudioManager] 音量調整エラー: {e}")
-    
+            
+    def _handle_voice_mode_nurse(self):
+        """F19: 音声モードをNURSE固定にする"""
+        if hasattr(self.tts, 'mode'):
+            self.tts.mode = "NURSE"
+            self.speak("ナースロボ固定モードに切り替わったよ", Priority.NOTIFICATION, self.conversation_volume)
+
+    def _handle_voice_mode_openai(self):
+        """F20: 音声モードをOPENAI固定にする"""
+        if hasattr(self.tts, 'mode'):
+            self.tts.mode = "OPENAI"
+            self.speak("予備の音声エンジンに切り替えました", Priority.NOTIFICATION, self.conversation_volume)
+
+    def _handle_voice_mode_hybrid(self):
+        """F21: 音声モードをHYBRIDにする"""
+        if hasattr(self.tts, 'mode'):
+            self.tts.mode = "HYBRID"
+            self.speak("ハイブリッドモードに戻ったよ", Priority.NOTIFICATION, self.conversation_volume)
+            
+    def _handle_voice_status(self):
+        """F22: 音声モードのステータスを読み上げる"""
+        if hasattr(self.tts, 'mode'):
+            mode = self.tts.mode
+            if mode == "NURSE":
+                 self.speak("現在の音声モードはナース固定ばい", Priority.NOTIFICATION, self.conversation_volume)
+            elif mode == "OPENAI":
+                 self.speak("現在の音声モードは予備のオープンAIです", Priority.NOTIFICATION, self.conversation_volume)
+            else:
+                 self.speak("現在の音声モードはハイブリッドだよ", Priority.NOTIFICATION, self.conversation_volume)
+        else:
+            self.speak("ハイブリッドTTSは未設定だよ", Priority.NOTIFICATION, self.conversation_volume)
+        
     # ========== 再生 ==========
     
     def _clean_for_speech(self, text: str) -> str:
@@ -570,6 +623,18 @@ class AudioManager:
                         self.tts.voice = voice
                         self.speak(f"声を{voice}に変えたよ", Priority.NOTIFICATION, self.notification_volume)
                         logger.info(f"[LINE CMD] 声変更 (Name): {voice}")
+                        
+        elif action == "voice_mode_nurse":
+            self._handle_voice_mode_nurse()
+            
+        elif action == "voice_mode_openai":
+            self._handle_voice_mode_openai()
+            
+        elif action == "voice_mode_hybrid":
+            self._handle_voice_mode_hybrid()
+            
+        elif action == "voice_status":
+            self._handle_voice_status()
     
     # ========== ライフサイクル ==========
     

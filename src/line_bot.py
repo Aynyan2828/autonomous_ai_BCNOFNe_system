@@ -421,6 +421,26 @@ API使用料が閾値に達しました
                     result = self._get_health_summary()
                     self.line_bot_api.reply_message(
                         event.reply_token, TextSendMessage(text=result))
+                        
+                elif text.lower() in ["voice nurse", "声ナース", "ナース声"]:
+                    self._send_audio_cmd("voice_mode_nurse", {})
+                    self.line_bot_api.reply_message(
+                        event.reply_token, TextSendMessage(text="🎙️ 音声モードをナースロボに切り替えます。"))
+                        
+                elif text.lower() in ["voice openai", "声オープン", "予備声"]:
+                    self._send_audio_cmd("voice_mode_openai", {})
+                    self.line_bot_api.reply_message(
+                        event.reply_token, TextSendMessage(text="🎙️ 音声モードをOpenAIに切り替えます。"))
+                        
+                elif text.lower() in ["voice hybrid", "声ハイブリッド", "ハイブリッド声"]:
+                    self._send_audio_cmd("voice_mode_hybrid", {})
+                    self.line_bot_api.reply_message(
+                        event.reply_token, TextSendMessage(text="🎙️ 音声モードをハイブリッドに切り替えます。"))
+                        
+                elif text.lower() in ["voice status", "声ステータス", "いまの声", "今の声"]:
+                    self._send_audio_cmd("voice_status", {})
+                    self.line_bot_api.reply_message(
+                        event.reply_token, TextSendMessage(text="🎙️ 音声ステータスを確認します..."))
                 
                 elif text in ["航海日誌", "日誌", "logbook"]:
                     result = self._get_daily_log()

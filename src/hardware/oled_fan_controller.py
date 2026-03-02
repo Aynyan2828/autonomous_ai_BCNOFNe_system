@@ -93,8 +93,8 @@ class OLEDFanController:
     LAST_TOUCH_PATH = os.path.join(STATE_DIR, "last_user_touch.txt")
     LINE_STATUS_FILE = "/tmp/shipos_line_status.json"
 
-    # 更新間隔 (環境変数 OLED_SCROLL_SPEED から取得、デフォルト 0.10秒 で以前より約20%高速)
-    OLED_UPDATE_INTERVAL = float(os.getenv("OLED_SCROLL_SPEED", "0.10"))
+    # 更新間隔 (環境変数 OLED_SCROLL_SPEED から取得、デフォルト 0.085秒 で以前より15%高速化)
+    OLED_UPDATE_INTERVAL = float(os.getenv("OLED_SCROLL_SPEED", "0.085"))
     SYS_UPDATE_INTERVAL = 2.0
     FAN_UPDATE_INTERVAL = 5.0
     AI_STATE_CHECK_INTERVAL = 1.0
@@ -134,6 +134,7 @@ class OLEDFanController:
         # AI状態キャッシュ
         self.current_ai_state = "Idle"
         self.current_ai_task = ""
+        self.current_voice_mode = "HYB"
 
         # shipOSモードキャッシュ
         self.current_ship_mode = "autonomous"
@@ -263,9 +264,9 @@ class OLEDFanController:
             if time.time() - ts <= ttl:
                 direction = data.get("direction", "")
                 if direction == "RX":
-                    return " [LINE: RX] "
+                    return "LINE 受信中..."
                 elif direction == "TX":
-                    return " [LINE: TX] "
+                    return "LINE 送信中..."
         except Exception:
             pass
         return ""
@@ -499,11 +500,11 @@ class OLEDFanController:
         # 生存確認（AI OFFLINE / AT ANCHOR の割り込み描画）
         if not self.is_ai_service_active():
             self.oled_display.render_lines([
-                "==== shipOS ====",
-                "[ AT ANCHOR ]",
+                "=== 停泊中 ===",
                 "",
                 "AI OFFLINE",
-                "System Waiting..."
+                "⚓",
+                ""
             ])
             return
 
@@ -523,13 +524,15 @@ class OLEDFanController:
         line_stat = self._check_line_status()
         
         mode_line = f"shipOS: {mode_disp} {mode_ascii}" + " " * 5
-        dest_log = f"DEST: {goal_short}" + " " * 5
+        
         sys_log = f"TEMP:{cpu_t:.0f}C DISK:{disk_pct:.0f}%" + " " * 5
+        ip_line = f"LAN: {ip_lan}  TS: {ip_ts}" + " " * 5
         
         if line_stat:
-            ip_line = f"LAN: {ip_lan} {line_stat} TS: {ip_ts}" + " " * 5
+            # LINE割り込みがある場合はDEST欄を上書きして強調
+            dest_log = f"*** {line_stat} ***" + " " * 8
         else:
-            ip_line = f"LAN: {ip_lan}  TS: {ip_ts}" + " " * 5
+            dest_log = f"DEST: {self.current_ai_task}" + " " * 8 # 長文もそのまま流す
 
         # 上3行: 右→左スクロール（波のように位相をずらす）
         line1 = self._scroll_text(mode_line, self._ip_offset)
@@ -537,7 +540,11 @@ class OLEDFanController:
         line3 = self._scroll_text(sys_log, self._ip_offset + 6)
         
         # 4行目: AI状態（顔文字）等 - 固定
-        line4 = f"AI: {ai_face}"[:21]
+        # AI: (´・ω・`) [HYB] のような表示にする
+        v_mode = self.current_voice_mode[:3].upper()
+        if not v_mode:
+             v_mode = "HYB"
+        line4 = f"AI: {ai_face} [{v_mode}]"[:21]
         
         # 5行目: IPテロップ
         line5 = self._scroll_text(ip_line, self._ip_offset)
@@ -552,59 +559,53 @@ class OLEDFanController:
         from time import sleep
         import os
         
-        # 0. bootログ開始
-        self.oled_display.show_message("===Boot===\nSystem Starting...", 0.6)
-        
-        # 1. ロゴ表示
+        # 1. ロゴ表示 (2秒固定)
         logo_path = "/home/pi/autonomous_ai/oled_128x64_resize_dither.png"
         if os.path.exists(logo_path) and hasattr(self.oled_display, 'draw_image'):
             self.oled_display.clear_buffer()
             self.oled_display.draw_image(logo_path)
             self.oled_display.flush()
-            sleep(1.5)
+            sleep(2.0)
             
-            # 2. フェードアウト風（点滅）
+            # 2. フェードアウト風演出（点滅3回、表示0.3秒・非表示0.2秒間隔）
             for _ in range(3):
                 self.oled_display.clear()
-                sleep(0.08)
+                sleep(0.2)
                 self.oled_display.clear_buffer()
                 self.oled_display.draw_image(logo_path)
                 self.oled_display.flush()
-                sleep(0.12)
+                sleep(0.3)
             
             self.oled_display.clear()
             sleep(0.3)
 
-        # 演出1: engine check
-        self.oled_display.show_message("===Boot===\nengine check...", 0.4)
-        sleep(0.4)
-        self.oled_display.show_message("===Boot===\nengine check... OK", 0.2)
-        sleep(0.2)
+        # 3. Bootログ開始
+        boot_lines = ["＝＝＝ Boot ＝＝＝"]
+        self.oled_display.render_lines(boot_lines)
+        sleep(0.5)
         
-        # 演出2: comms check
-        self.oled_display.show_message("===Boot===\ncomms check...", 0.4)
-        sleep(0.4)
-        self.oled_display.show_message("===Boot===\ncomms check... OK", 0.2)
-        sleep(0.2)
-        
-        # 演出3: storage check
-        self.oled_display.show_message("===Boot===\nstorage check...", 0.4)
-        sleep(0.4)
-        self.oled_display.show_message("===Boot===\nstorage check... OK", 0.2)
-        sleep(0.2)
-        
-        # 演出4: audio check
-        self.oled_display.show_message("===Boot===\naudio check...", 0.4)
-        sleep(0.4)
-        self.oled_display.show_message("===Boot===\naudio check... OK", 0.2)
-        sleep(0.2)
+        checks = ["engine check...", "comms check...", "storage check...", "audio check..."]
+        for check in checks:
+            if len(boot_lines) >= 5:
+                boot_lines.pop(1) # Keep header at the top
+            boot_lines.append(check)
+            self.oled_display.render_lines(boot_lines)
+            sleep(0.4)
+            boot_lines[-1] = check + " ok"
+            self.oled_display.render_lines(boot_lines)
+            sleep(0.2)
 
-        # 演出5: DIAG
-        self.oled_display.show_message("=DIAG=\nAI modules...ok", 0.5)
+        # 4. DIAG
+        diag_lines = ["＝ DIAG ＝"]
+        self.oled_display.render_lines(diag_lines)
         sleep(0.5)
-        self.oled_display.show_message("=DIAG=\nAI modules...ok\nSSD...ok", 0.5)
-        sleep(0.5)
-        self.oled_display.show_message("=DIAG=\nAI modules...ok\nSSD...ok\nHDD...ok", 1.0)
+        
+        diags = ["AI modules...ok", "SSD...ok", "HDD...ok"]
+        for d in diags:
+            diag_lines.append(d)
+            self.oled_display.render_lines(diag_lines)
+            sleep(0.4)
+            
         sleep(1.0)
 
     def run(self):
