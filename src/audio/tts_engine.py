@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 class TTSEngine(ABC):
     """TTSエンジン抽象基底クラス"""
+    name: str = "unknown"
+    speaker_id: int = 0
     
     @abstractmethod
     def synthesize(self, text: str, output_path: str, speed: float = 1.0) -> bool:
@@ -124,25 +126,34 @@ class OpenAITTS(TTSEngine):
 
 
 class VoicevoxTTS(TTSEngine):
-    """Voicevox TTS ローカル音声合成"""
+    """Voicevox TTS ローカル音声合成（遅延・バックグラウンドロード対応）"""
     
     def __init__(self, core_dir: str, speaker_id: int = 47, speed: float = 1.0):
         self.core_dir = core_dir
         self.speaker_id = speaker_id
         self.default_speed = speed
         self._synth = None
+        self._is_ready = False
+        self._init_error = None
         
         if not os.path.exists(core_dir):
             raise FileNotFoundError(f"Voicevox core dir not found: {core_dir}")
             
+        # エンジンの初期化が重いためバックグラウンドでロードする
+        import threading
+        t = threading.Thread(target=self._init_in_background, daemon=True)
+        t.start()
+
+    def _init_in_background(self):
         try:
             from voicevox_core.blocking import Onnxruntime, OpenJtalk, Synthesizer, VoiceModelFile
             import glob
             
-            logger.info("[TTS] VOICEVOX 初期化中...")
+            logger.info("[TTS] VOICEVOX のバックグラウンド初期化を開始...")
             ort_libs = glob.glob(os.path.join(self.core_dir, "onnxruntime", "lib", "libvoicevox_onnxruntime*"))
             if not ort_libs:
-                raise FileNotFoundError("onnxruntime lib not found")
+                self._init_error = "onnxruntime lib not found"
+                raise FileNotFoundError(self._init_error)
                 
             ort = Onnxruntime.load_once(filename=ort_libs[0])
             ojt = OpenJtalk(os.path.join(self.core_dir, "dict", "open_jtalk_dic_utf_8-1.11"))
@@ -151,14 +162,30 @@ class VoicevoxTTS(TTSEngine):
             for vvm in glob.glob(os.path.join(self.core_dir, "models", "vvms", "*.vvm")):
                 self._synth.load_voice_model(VoiceModelFile.open(vvm))
                 
-            logger.info("[TTS] VOICEVOX 初期化完了")
+            self._is_ready = True
+            logger.info("[TTS] VOICEVOX 初期化完了（準備OK）")
         except Exception as e:
-            logger.error(f"[TTS] Voicevox 初期化エラー: {e}")
-            raise
+            self._init_error = str(e)
+            logger.error(f"[TTS] Voicevox バックグラウンド初期化エラー: {e}")
 
     def synthesize(self, text: str, output_path: str, speed: float = 1.0) -> bool:
         """Voicevoxでテキスト→WAV生成"""
         start = time.time()
+        
+        # バックグラウンドロード待ち（最大15秒）
+        if not self._is_ready:
+            logger.info("[TTS] Voicevox のバックグラウンドロード完了を待機中...")
+            wait_start = time.time()
+            while not self._is_ready and (time.time() - wait_start) < 15.0:
+                time.sleep(0.5)
+                if self._init_error:
+                    logger.error(f"[TTS] Voicevox 初期化フェイタルのため合成中止: {self._init_error}")
+                    return False
+            
+            if not self._is_ready:
+                logger.error("[TTS] Voicevox 初期化完了タイムアウト。フォールバックします。")
+                return False
+
         try:
             if not self._synth:
                 return False
