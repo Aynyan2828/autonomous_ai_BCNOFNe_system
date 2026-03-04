@@ -18,6 +18,9 @@ import subprocess
 import logging
 from typing import Dict
 from pathlib import Path
+import psutil
+from PIL import Image, ImageDraw, ImageFont
+from version import get_version
 
 # OLEDDisplayドライバをインポート
 try:
@@ -47,7 +50,8 @@ class OLEDStatus:
         self.ts_ip = "OFFLINE"
         
         # スクロール用
-        self.banner_text = "BCNOFNe : SAIL"
+        version = get_version()
+        self.banner_text = f"BCNOFNe v{version} : SAIL"
         self.scroll_pos = 127
         self.scroll_speed = 4  # 高速化 (以前より速く)
 

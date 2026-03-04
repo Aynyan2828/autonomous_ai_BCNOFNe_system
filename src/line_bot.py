@@ -22,6 +22,9 @@ if env_path.exists():
 else:
     # 代替パスも試す
     load_dotenv("/home/pi/autonomous_ai_BCNOFNe_system/.env")
+import logging
+from datetime import datetime
+from typing import Optional, Dict
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -29,6 +32,7 @@ from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
     QuickReply, QuickReplyButton, MessageAction
 )
+from version import get_full_version_string
 
 
 class LINEBot:
@@ -64,6 +68,8 @@ class LINEBot:
         
         # 課金確認の待機状態を管理
         self.pending_confirmations = {}
+        
+        self.logger.info(f"LINE Bot Initialized: {get_full_version_string()}")
         
         # LINE実行ログ送信フラグ（デフォルトOFF）
         self.exec_log_enabled = os.getenv("LINE_EXEC_LOG_ENABLED", "false").lower() == "true"
@@ -363,6 +369,8 @@ API使用料が閾値に達しました
                 except:
                     pass
 
+        return app
+    
     def _process_received_text(self, event, text):
         """受信テキストの分岐処理"""
         if text.startswith("許可:") or text.startswith("拒否:"):
@@ -378,11 +386,19 @@ API使用料が閾値に達しました
                     event.reply_token,
                     TextSendMessage(text=reply_text)
                 )
+                del self.pending_confirmations[confirmation_id] # 応答済みを削除
             else:
                 self.line_bot_api.reply_message(
                     event.reply_token,
                     TextSendMessage(text="⚠️ 確認IDが見つかりません")
                 )
+        elif text.strip().lower() in ["/version", "version"]:
+            # バージョン情報の返答
+            v_str = get_full_version_string()
+            self.line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"📊 現在のシステムバージョン:\n{v_str}")
+            )
         else:
             # 特別コマンドをチェック
             if text in ["停止", "ストップ", "stop", "STOP"]:

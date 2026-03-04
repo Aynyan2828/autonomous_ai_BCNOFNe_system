@@ -72,6 +72,9 @@ try:
 except ImportError:
     OLED_ENABLED = False
 
+# ロガー設定
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class IntegratedSystem:
     """統合システムクラス"""
@@ -79,6 +82,7 @@ class IntegratedSystem:
     def __init__(self):
         """初期化"""
         print("システムを初期化中...")
+        logger.info(f"=== Starting {get_full_version_string()} ===")
         
         # 各モジュールの初期化
         self.agent = AutonomousAgent(
