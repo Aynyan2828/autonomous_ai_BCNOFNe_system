@@ -65,6 +65,7 @@ class SpeakRequest:
         self.volume = volume
         self.category = category
         self.speaker_id = speaker_id
+        self.created_at = time.time()
 
 
 class AudioManager:
@@ -310,7 +311,10 @@ class AudioManager:
     def _handle_status_read(self):
         """F15: システム状態読み上げ"""
         logger.info("[AudioManager] [AUDIO_DEBUG] Status read requested.")
+        start_time = time.time()
         text = get_system_status_text()
+        acquisition_time = time.time() - start_time
+        logger.info(f"[LATENCY] F15 情報取得時間: {acquisition_time:.3f}秒")
         self.speak(text, Priority.NOTIFICATION, self.conversation_volume)
     
     def _handle_logbook(self):
@@ -459,6 +463,7 @@ class AudioManager:
             
             logger.info(f"[AudioManager] [AUDIO_DEBUG] synthesizing TTS -> {wav_path}")
             
+            tts_start = time.time()
             # 音声バリエーションの指定（Voicevoxのみ対応）
             try:
                 if hasattr(self.tts, 'speaker_id') and req.speaker_id is not None:
@@ -471,6 +476,9 @@ class AudioManager:
             except Exception as e:
                 logger.error(f"[AudioManager] [AUDIO_DEBUG] synthesize method error: {e}")
                 success = False
+            
+            tts_time = time.time() - tts_start
+            logger.info(f"[LATENCY] TTS生成時間: {tts_time:.3f}秒 (text_len={len(req.text)})")
                 
             if not success:
                 logger.error("[AudioManager] [AUDIO_DEBUG] TTS合成失敗")
@@ -526,6 +534,9 @@ class AudioManager:
             if device != "default":
                 aplay_cmd.extend(["-D", device])
             aplay_cmd.append(play_path)
+            
+            playback_wait = time.time() - req.created_at
+            logger.info(f"[LATENCY] 再生開始までの待機時間: {playback_wait:.3f}秒 (キュー待機含む)")
             
             logger.info(f"[AudioManager] [AUDIO_DEBUG] executing aplay: {' '.join(aplay_cmd)}")
             res = subprocess.run(

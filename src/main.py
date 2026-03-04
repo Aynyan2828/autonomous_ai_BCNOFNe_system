@@ -26,6 +26,9 @@ required_env_vars = [
     "LINE_TARGET_USER_ID"
 ]
 
+# オプション環境変数
+LINE_MAINTENANCE_NOTIFY = os.getenv("LINE_MAINTENANCE_NOTIFY", "false").lower() == "true"
+
 missing_vars = [var for var in required_env_vars if not os.getenv(var)]
 if missing_vars:
     print(f"エラー: 以下の環境変数が設定されていません: {', '.join(missing_vars)}")
@@ -374,10 +377,10 @@ class IntegratedSystem:
             try:
                 answer = self.quick_responder.respond(text)
                 if not is_voice:
-                    self.line.send_message(f"<< {answer}")
+                    self.line.send_message(f"🤔 {answer}")
                 self.agent.log(f"質問回答完了: {text[:30]}...", "INFO")
-                # 回答を音声で読み上げ（最優先）
-                self._send_audio_cmd("speak", {"text": answer[:200]})
+                # 回答を音声で読み上げ（必ず同期）
+                self._send_audio_cmd("speak", {"text": answer})
                 try:
                     self.discord.send_message(f">> 質問応答:\nQ: {text}\nA: {answer[:200]}")
                 except Exception:
@@ -395,9 +398,9 @@ class IntegratedSystem:
             self.agent.update_goal(text, source="user")
             
             if not is_voice:
-                self.line.send_status(f"[OK] 目標を設定したばい:\n{text}")
+                self.line.send_status(f"🫡 了解ばい：\n{text}")
             # 音声で通知
-            self._send_audio_cmd("speak", {"text": f"マスター、了解ばい。{text[:50]}、やっておくね。"})
+            self._send_audio_cmd("speak", {"text": f"マスター、了解ばい。{text}、やっておくね。"})
             try:
                 self.discord.send_message(f">> LINEから新しい目標を受信:\n{text}")
             except Exception:
@@ -458,8 +461,20 @@ class IntegratedSystem:
                         "注意"
                     )
             
+            # 思考中通知用タイマー（15秒以上かかる場合にLINE送信）
+            thinking_timer = None
+            def notify_thinking():
+                self.line.send_status("⌛ 現在、最善の手を検討中ばい...")
+                self.agent.log("思考時間が15秒を超えたため、LINEで進捗を共有しました", "INFO")
+
+            thinking_timer = threading.Timer(15.0, notify_thinking)
+            thinking_timer.start()
+
             # エージェント実行
-            success = self.agent.run_iteration()
+            try:
+                success = self.agent.run_iteration()
+            finally:
+                thinking_timer.cancel()
             
             if success:
                 # 使用量を記録
@@ -509,7 +524,8 @@ class IntegratedSystem:
     def run_maintenance(self):
         """定期メンテナンス"""
         print("定期メンテナンスを実行中...")
-        self.line.send_status("🔧 定期メンテナンス実行中...")
+        if LINE_MAINTENANCE_NOTIFY:
+            self.line.send_status("🔧 定期メンテナンス実行中...")
         
         # ストレージチェック
         alert = self.storage.monitor_storage(threshold_percent=80.0)
@@ -545,7 +561,8 @@ class IntegratedSystem:
             summary = self.agent.memory.get_summary()
             self.discord.send_memory_summary(summary)
         
-        self.line.send_status("✅ メンテナンス完了")
+        if LINE_MAINTENANCE_NOTIFY:
+            self.line.send_status("✅ メンテナンス完了")
     
     def run(self):
         """メインループ"""

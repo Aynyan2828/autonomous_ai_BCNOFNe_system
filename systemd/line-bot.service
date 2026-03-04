@@ -9,7 +9,7 @@ User=pi
 WorkingDirectory=/home/pi/autonomous_ai_BCNOFNe_system
 Environment="PATH=/home/pi/autonomous_ai_BCNOFNe_system/venv/bin:/usr/local/bin:/usr/bin:/bin"
 ExecStartPre=/bin/sleep 5
-ExecStart=/home/pi/autonomous_ai_BCNOFNe_system/venv/bin/python3 /home/pi/autonomous_ai_BCNOFNe_system/src/line_bot.py
+ExecStart=/home/pi/autonomous_ai_BCNOFNe_system/venv/bin/gunicorn -w 4 -b 0.0.0.0:5000 src.line_bot:app
 Restart=always
 RestartSec=10
 StandardOutput=journal

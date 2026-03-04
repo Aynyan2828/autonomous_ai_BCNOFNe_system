@@ -5,11 +5,11 @@ shipOS OLED ステータスコントローラ
 OLEDDisplay ドライバを使い、起動テロップ・自己診断・5行表示を制御
 
 表示レイアウト（5行）:
-  1: shipOS:{mode} {emoji}
+  1: BCNOFNe:SAIL (Scrolling)
   2: DEST:{goal}
   3: HELM:{state}
   4: TEMP:{cpu}C DISK:{disk}%
-  5: IP:{address}
+  5: IP:{LAN} TS:{Tailscale}
 """
 
 import os
@@ -44,6 +44,12 @@ class OLEDStatus:
     def __init__(self):
         self.current_stage = self.STAGE_INIT
         self.current_ip = "取得中..."
+        self.ts_ip = "OFFLINE"
+        
+        # スクロール用
+        self.banner_text = "BCNOFNe : SAIL"
+        self.scroll_pos = 127
+        self.scroll_speed = 4  # 高速化 (以前より速く)
 
         # OLEDDisplayドライバを利用
         if OLED_DRIVER_AVAILABLE:
@@ -63,24 +69,39 @@ class OLEDStatus:
             print("=" * 30)
 
     def _get_ip(self) -> str:
-        """IPアドレスを取得"""
+        """IPアドレスを取得 (LAN & Tailscale)"""
+        lan_ip = "NONE"
+        ts_ip = "OFFLINE"
         try:
+            # LAN IP
             result = subprocess.run(
                 ["hostname", "-I"],
-                capture_output=True, text=True, timeout=3
+                capture_output=True, text=True, timeout=2
             )
             ips = result.stdout.strip().split()
-            return ips[0] if ips else "NONE"
+            if ips:
+                lan_ip = ips[0]
+            
+            # Tailscale IP
+            ts_result = subprocess.run(
+                ["tailscale", "ip", "-4"],
+                capture_output=True, text=True, timeout=2
+            )
+            if ts_result.returncode == 0:
+                ts_ip = ts_result.stdout.strip()
+            
+            self.ts_ip = ts_ip
+            return lan_ip
         except Exception:
-            return "NET ERR"
+            return "ERR"
 
     # ====================
     # 起動テロップ
     # ====================
     def show_startup_telop(self):
-        """shipOS起動テロップ"""
+        """BCNOFNe起動テロップ"""
         frames = [
-            ["", "  shipOS v4.0", "  BCNOFNe", "  起動開始...", ""],
+            ["", "   BCNOFNe", "    ShipOS", "  起動開始...", ""],
             ["=== BOOT ===", "  Engine:  CHECK", "  Helm:    CHECK", "  Comms:   CHECK", "  Storage: CHECK"],
         ]
         for frame in frames:
@@ -170,19 +191,33 @@ class OLEDStatus:
         }
         display_state = state_map.get(state, state[:6].upper())
 
-        # IPが未取得なら取得
-        if self.current_ip in ("取得中...", "NONE", "NET ERR"):
-            self.current_ip = self._get_ip()
-
+        # スクロール更新
+        self.scroll_pos -= self.scroll_speed
+        if self.scroll_pos < -120:
+            self.scroll_pos = 127
+            
+        banner = " " * (self.scroll_pos // 6) + self.banner_text if self.scroll_pos > 0 else self.banner_text[abs(self.scroll_pos)//6:]
+        # Note: 簡易スクロール（文字単位）
+        
         goal_short = goal[:13] if goal else "---"
         task_short = task[:14] if task else "-"
 
+        # ボイスモードの読み込み
+        voice_mode = "HYB"
+        try:
+            import json
+            if os.path.exists("/var/run/ai_audio_state.json"):
+                with open("/var/run/ai_audio_state.json", "r") as f:
+                    voice_mode = json.load(f).get("voice_mode", "HYB")
+        except:
+            pass
+
         lines = [
-            f"shipOS:SAIL",
+            banner,
             f"DEST:{goal_short}",
-            f"HELM:{display_state} {task_short}",
+            f"HELM:{display_state} [{voice_mode}]",
             f"TEMP:-- DISK:--%",
-            f"IP:{self.current_ip}",
+            f"IP:{self.current_ip} TS:{self.ts_ip[:10]}",
         ]
 
         # CPU温度/ディスクをできれば取得
@@ -208,7 +243,7 @@ class OLEDStatus:
     def show_shutdown(self):
         """シャットダウン表示"""
         self._render([
-            "", "  shipOS", "  Shutdown...", "  See you,", "  Master"
+            "", "  BCNOFNe", "  Shutdown...", "  See you,", "  Master"
         ])
         time.sleep(2)
         self.clear()

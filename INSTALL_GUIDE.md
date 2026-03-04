@@ -334,8 +334,388 @@ sudo systemctl start autonomous-ai.service
 ```python
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""\nLINE Botモジュール\nスマホからの指示受付と通知\n"""\n\nimport os\nimport json\nfrom datetime import datetime\nfrom typing import Optional, Dict\nfrom flask import Flask, request, abort\nfrom linebot import LineBotApi, WebhookHandler\nfrom linebot.exceptions import InvalidSignatureError\nfrom linebot.models import (\n    MessageEvent, TextMessage, TextSendMessage,\n    QuickReply, QuickReplyButton, MessageAction\n)\n\n\nclass LINEBot:\n    """LINE Bot クラス"""\n    \n    def __init__(\n        self,\n        channel_access_token: Optional[str] = None,\n        channel_secret: Optional[str] = None,\n        target_user_id: Optional[str] = None\n    ):\n        """\n        初期化\n        \n        Args:\n            channel_access_token: LINE Channel Access Token\n            channel_secret: LINE Channel Secret\n            target_user_id: 通知先のユーザーID\n        """\n        self.channel_access_token = channel_access_token or os.getenv("LINE_CHANNEL_ACCESS_TOKEN")\n        self.channel_secret = channel_secret or os.getenv("LINE_CHANNEL_SECRET")\n        self.target_user_id = target_user_id or os.getenv("LINE_TARGET_USER_ID")\n        \n        if not self.channel_access_token or not self.channel_secret:\n            raise ValueError("LINE認証情報が設定されていません")\n        \n        self.line_bot_api = LineBotApi(self.channel_access_token)\n        self.handler = WebhookHandler(self.channel_secret)\n        \n        # 課金確認の待機状態を管理\n        self.pending_confirmations = {}\n    \n    def send_message(self, message: str, user_id: Optional[str] = None) -> bool:\n        """\n        LINEメッセージを送信\n        \n        Args:\n            message: 送信するメッセージ\n            user_id: 送信先ユーザーID（指定しない場合はデフォルト）\n            \n        Returns:\n            成功したらTrue\n        """\n        try:\n            target = user_id or self.target_user_id\n            \n            if not target:\n                print("エラー: 送信先ユーザーIDが設定されていません")\n                return False\n            \n            self.line_bot_api.push_message(\n                target,\n                TextSendMessage(text=message)\n            )\n            \n            return True\n            \n        except Exception as e:\n            print(f"LINEメッセージ送信エラー: {e}")\n            return False\n    \n    def send_startup_notification(self) -> bool:\n        """\n        起動通知を送信\n        \n        Returns:\n            成功したらTrue\n        """\n        message = f"""🚀 システム起動\n\n自律AIエージェントが起動しました\n\n起動時刻: {datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}\nステータス: ✅ 正常起動\n"""\n        return self.send_message(message)\n    \n    def send_shutdown_notification(self, reason: str = "通常終了") -> bool:\n        """\n        停止通知を送信\n        \n        Args:\n            reason: 停止理由\n            \n        Returns:\n            成功したらTrue\n        """\n        message = f"""⏹️ システム停止\n\n自律AIエージェントが停止しました\n\n停止時刻: {datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}\n停止理由: {reason}\n"""\n        return self.send_message(message)\n    \n    def send_execution_log(\n        self,\n        iteration: int,\n        goal: str,\n        commands: list,\n        results: list\n    ) -> bool:\n        """\n        実行ログを送信\n        \n        Args:\n            iteration: イテレーション番号\n            goal: 現在の目標\n            commands: 実行したコマンド\n            results: 実行結果\n            \n        Returns:\n            成功したらTrue\n        """\n        success_count = sum(1 for r in results if r.get("success", False))\n        fail_count = len(results) - success_count\n        \n        message = f"""📊 実行ログ #{iteration}\n\n目標: {goal}\n\n実行コマンド数: {len(commands)}\n✅ 成功: {success_count}\n❌ 失敗: {fail_count}\n\n時刻: {datetime.now().strftime("%H:%M:%S")}\n"""\n        return self.send_message(message)\n    \n    def send_error_notification(self, error_message: str) -> bool:\n        """\n        エラー通知を送信\n        \n        Args:\n            error_message: エラーメッセージ\n            \n        Returns:\n            成功したらTrue\n        """\n        message = f"""⚠️ エラー発生\n\n{error_message}\n\n発生時刻: {datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}\n"""\n        return self.send_message(message)\n    \n    def send_memory_summary(self, summary: str) -> bool:\n        """\n        メモリ要約を送信\n        \n        Args:\n            summary: メモリの要約\n            \n        Returns:\n            成功したらTrue\n        """\n        # LINEの文字数制限に対応（最大5000文字）\n        if len(summary) > 4900:\n            summary = summary[:4900] + "..."\n        \n        message = f"📚 メモリサマリー\n\n{summary}"\n        return self.send_message(message)\n    \n    def send_cost_alert(\n        self,\n        current_cost: float,\n        threshold: float,\n        alert_level: str = "注意"\n    ) -> bool:\n        """\n        コストアラートを送信\n        \n        Args:\n            current_cost: 現在のコスト（円）\n            threshold: 閾値（円）\n            alert_level: アラートレベル\n            \n        Returns:\n            成功したらTrue\n        """\n        icons = {\n            "注意": "⚠️",\n            "警告": "🚨",\n            "停止": "🛑"\n        }\n        icon = icons.get(alert_level, "⚠️")\n        \n        message = f"""{icon} コストアラート: {alert_level}\n\nAPI使用料が閾値に達しました\n\n現在のコスト: ¥{current_cost:.2f}\n閾値: ¥{threshold:.2f}\n\n{datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}\n"""\n        return self.send_message(message)\n    \n    def request_billing_confirmation(\n        self,\n        action_description: str,\n        estimated_cost: float,\n        confirmation_id: str\n    ) -> bool:\n        """\n        課金確認リクエストを送信\n        \n        Args:\n            action_description: アクションの説明\n            estimated_cost: 見積もりコスト（円）\n            confirmation_id: 確認ID\n            \n        Returns:\n            成功したらTrue\n        """\n        try:\n            message = f"""💰 課金確認\n\n以下のアクションを実行しますか?\n\nアクション: {action_description}\n見積もりコスト: ¥{estimated_cost:.2f}\n\n10分以内に応答がない場合は自動キャンセルされます。\n"""\n            \n            # クイックリプライボタンを追加\n            quick_reply = QuickReply(items=[\n                QuickReplyButton(action=MessageAction(label="✅ 許可", text=f"許可:{confirmation_id}")),
-                QuickReplyButton(action=MessageAction(label="❌ 拒否", text=f"拒否:{confirmation_id}"))\n            ])\n            \n            self.line_bot_api.push_message(\n                self.target_user_id,\n                TextSendMessage(text=message, quick_reply=quick_reply)\n            )\n            \n            # 待機状態を記録\n            self.pending_confirmations[confirmation_id] = {\n                "action": action_description,\n                "cost": estimated_cost,\n                "timestamp": datetime.now().isoformat()\n            }\n            \n            return True\n            \n        except Exception as e:\n            print(f"課金確認送信エラー: {e}")\n            return False\n    \n    def create_webhook_app(self) -> Flask:\n        """\n        Webhook用のFlaskアプリを作成\n        \n        Returns:\n            Flaskアプリ\n        """\n        app = Flask(__name__)\n        \n        @app.route("/callback", methods=["POST"])\n        def callback():\n            # 署名検証\n            signature = request.headers["X-Line-Signature"]\n            body = request.get_data(as_text=True)\n            \n            try:\n                self.handler.handle(body, signature)\n            except InvalidSignatureError:\n                abort(400)\n            \n            return "OK"\n        \n        @self.handler.add(MessageEvent, message=TextMessage)\n        def handle_message(event):\n            text = event.message.text\n            \n            # 課金確認の応答をチェック\n            if text.startswith("許可:") or text.startswith("拒否:"):\n                confirmation_id = text.split(":", 1)[1]\n                response = "許可" if text.startswith("許可:") else "拒否"\n                \n                if confirmation_id in self.pending_confirmations:\n                    # 確認結果を保存（別のモジュールから参照できるように）\n                    self._save_confirmation_result(confirmation_id, response)\n                    \n                    reply_text = f"✅ {response}しました" if response == "許可" else f"❌ {response}しました"\n                    self.line_bot_api.reply_message(\n                        event.reply_token,\n                        TextSendMessage(text=reply_text)\n                    )\n                else:\n                    self.line_bot_api.reply_message(\n                        event.reply_token,\n                        TextSendMessage(text="⚠️ 確認IDが見つかりません")\n                    )\n            else:\n                # 通常のメッセージ（エージェントへの指示として処理）\n                self._save_user_command(text, event.source.user_id)\n                self.line_bot_api.reply_message(\n                    event.reply_token,\n                    TextSendMessage(text="📝 指示を受け付けました")\n                )\n        \n        return app\n    \n    def _save_confirmation_result(self, confirmation_id: str, response: str):\n        """\n        確認結果を保存\n        \n        Args:\n            confirmation_id: 確認ID\n            response: 応答（許可/拒否）\n        """\n        result_file = f"/home/pi/autonomous_ai_BCNOFNe_system/billing/confirmations/{confirmation_id}.json"\n        os.makedirs(os.path.dirname(result_file), exist_ok=True)\n        \n        with open(result_file, "w", encoding="utf-8") as f:\n            json.dump({\n                "confirmation_id": confirmation_id,\n                "response": response,\n                "timestamp": datetime.now().isoformat()\n            }, f, ensure_ascii=False, indent=2)\n    \n    def _save_user_command(self, command: str, user_id: str):\n        """\n        ユーザーコマンドを保存\n        \n        Args:\n            command: コマンド\n            user_id: ユーザーID\n        """\n        command_file = "/home/pi/autonomous_ai_BCNOFNe_system/commands/user_commands.jsonl"\n        os.makedirs(os.path.dirname(command_file), exist_ok=True)\n        \n        with open(command_file, "a", encoding="utf-8") as f:\n            f.write(json.dumps({\n                "command": command,\n                "user_id": user_id,\n                "timestamp": datetime.now().isoformat()\n            }, ensure_ascii=False) + "\n")\n    \n    def run_webhook_server(self, host: str = "0.0.0.0", port: int = 5000):\n        """\n        Webhookサーバーを起動\n        \n        Args:\n            host: ホスト\n            port: ポート\n        """\n        app = self.create_webhook_app()\n        app.run(host=host, port=port)\n\n\n# テスト用\nif __name__ == "__main__":\n    # 環境変数から認証情報を取得\n    bot = LINEBot()\n    \n    # テスト送信\n    print("起動通知を送信...")\n    bot.send_startup_notification()\n    \n    print("実行ログを送信...")\n    bot.send_execution_log(\n        iteration=1,\n        goal="システムの状態確認",\n        commands=["ls -la", "df -h"],\n        results=[{"success": True}, {"success": True}]\n    )\n    \n    print("テスト完了")\n```
+"""
+LINE Botモジュール
+スマホからの指示受付と通知
+"""
+
+import os
+import json
+import logging
+from datetime import datetime
+from typing import Optional, Dict
+from flask import Flask, request, abort
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import (
+    MessageEvent, TextMessage, TextSendMessage,
+    QuickReply, QuickReplyButton, MessageAction
+)
+
+# ロギング設定
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logger = logging.getLogger(__name__)
+
+
+class LINEBot:
+    """LINE Bot クラス"""
+    
+    def __init__(
+        self,
+        channel_access_token: Optional[str] = None,
+        channel_secret: Optional[str] = None,
+        target_user_id: Optional[str] = None
+    ):
+        """
+        初期化
+        
+        Args:
+            channel_access_token: LINE Channel Access Token
+            channel_secret: LINE Channel Secret
+            target_user_id: 通知先のユーザーID
+        """
+        self.channel_access_token = channel_access_token or os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+        self.channel_secret = channel_secret or os.getenv("LINE_CHANNEL_SECRET")
+        self.target_user_id = target_user_id or os.getenv("LINE_TARGET_USER_ID")
+        
+        if not self.channel_access_token or not self.channel_secret:
+            logger.error("LINE認証情報が設定されていません")
+            raise ValueError("LINE認証情報が設定されていません")
+        
+        self.line_bot_api = LineBotApi(self.channel_access_token)
+        self.handler = WebhookHandler(self.channel_secret)
+        
+        # 課金確認の待機状態を管理
+        self.pending_confirmations = {}
+    
+    def send_message(self, message: str, user_id: Optional[str] = None) -> bool:
+        """
+        LINEメッセージを送信
+        
+        Args:
+            message: 送信するメッセージ
+            user_id: 送信先ユーザーID（指定しない場合はデフォルト）
+            
+        Returns:
+            成功したらTrue
+        """
+        try:
+            target = user_id or self.target_user_id
+            
+            if not target:
+                logger.error("送信先ユーザーIDが設定されていません")
+                return False
+            
+            self.line_bot_api.push_message(
+                target,
+                TextSendMessage(text=message)
+            )
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"LINEメッセージ送信エラー: {e}")
+            return False
+    
+    def send_startup_notification(self) -> bool:
+        """
+        起動通知を送信
+        
+        Returns:
+            成功したらTrue
+        """
+        message = f"""🚀 システム起動
+
+自律AIエージェントが起動しました
+
+起動時刻: {datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}
+ステータス: ✅ 正常起動
+"""
+        return self.send_message(message)
+    
+    def send_shutdown_notification(self, reason: str = "通常終了") -> bool:
+        """
+        停止通知を送信
+        
+        Args:
+            reason: 停止理由
+            
+        Returns:
+            成功したらTrue
+        """
+        message = f"""⏹️ システム停止
+
+自律AIエージェントが停止しました
+
+停止時刻: {datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}
+停止理由: {reason}
+"""
+        return self.send_message(message)
+    
+    def send_execution_log(
+        self,
+        iteration: int,
+        goal: str,
+        commands: list,
+        results: list
+    ) -> bool:
+        """
+        実行ログを送信
+        
+        Args:
+            iteration: イテレーション番号
+            goal: 現在の目標
+            commands: 実行したコマンド
+            results: 実行結果
+            
+        Returns:
+            成功したらTrue
+        """
+        success_count = sum(1 for r in results if r.get("success", False))
+        fail_count = len(results) - success_count
+        
+        message = f"""📊 実行ログ #{iteration}
+
+目標: {goal}
+
+実行コマンド数: {len(commands)}
+✅ 成功: {success_count}
+❌ 失敗: {fail_count}
+
+時刻: {datetime.now().strftime("%H:%M:%S")}
+"""
+        return self.send_message(message)
+    
+    def send_error_notification(self, error_message: str) -> bool:
+        """
+        エラー通知を送信
+        
+        Args:
+            error_message: エラーメッセージ
+            
+        Returns:
+            成功したらTrue
+        """
+        message = f"""⚠️ エラー発生
+
+{error_message}
+
+発生時刻: {datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}
+"""
+        return self.send_message(message)
+    
+    def send_memory_summary(self, summary: str) -> bool:
+        """
+        メモリ要約を送信
+        
+        Args:
+            summary: メモリの要約
+            
+        Returns:
+            成功したらTrue
+        """
+        # LINEの文字数制限に対応（最大5000文字）
+        if len(summary) > 4900:
+            summary = summary[:4900] + "..."
+        
+        message = f"📚 メモリサマリー
+
+{summary}"
+        return self.send_message(message)
+    
+    def send_cost_alert(
+        self,
+        current_cost: float,
+        threshold: float,
+        alert_level: str = "注意"
+    ) -> bool:
+        """
+        コストアラートを送信
+        
+        Args:
+            current_cost: 現在のコスト（円）
+            threshold: 閾値（円）
+            alert_level: アラートレベル
+            
+        Returns:
+            成功したらTrue
+        """
+        icons = {
+            "注意": "⚠️",
+            "警告": "🚨",
+            "停止": "🛑"
+        }
+        icon = icons.get(alert_level, "⚠️")
+        
+        message = f"""{icon} コストアラート: {alert_level}
+
+API使用料が閾値に達しました
+
+現在のコスト: ¥{current_cost:.2f}
+閾値: ¥{threshold:.2f}
+
+{datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}
+"""
+        return self.send_message(message)
+    
+    def request_billing_confirmation(
+        self,
+        action_description: str,
+        estimated_cost: float,
+        confirmation_id: str
+    ) -> bool:
+        """
+        課金確認リクエストを送信
+        
+        Args:
+            action_description: アクションの説明
+            estimated_cost: 見積もりコスト（円）
+            confirmation_id: 確認ID
+            
+        Returns:
+            成功したらTrue
+        """
+        try:
+            message = f"""💰 課金確認
+
+以下のアクションを実行しますか?
+
+アクション: {action_description}
+見積もりコスト: ¥{estimated_cost:.2f}
+
+10分以内に応答がない場合は自動キャンセルされます。
+"""
+            
+            # クイックリプライボタンを追加
+            quick_reply = QuickReply(items=[
+                QuickReplyButton(action=MessageAction(label="✅ 許可", text=f"許可:{confirmation_id}")),
+                QuickReplyButton(action=MessageAction(label="❌ 拒否", text=f"拒否:{confirmation_id}"))
+            ])
+            
+            self.line_bot_api.push_message(
+                self.target_user_id,
+                TextSendMessage(text=message, quick_reply=quick_reply)
+            )
+            
+            # 待機状態を記録
+            self.pending_confirmations[confirmation_id] = {
+                "action": action_description,
+                "cost": estimated_cost,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"課金確認送信エラー: {e}")
+            return False
+    
+    def create_webhook_app(self) -> Flask:
+        """
+        Webhook用のFlaskアプリを作成
+        
+        Returns:
+            Flaskアプリ
+        """
+        app = Flask(__name__)
+        
+        @app.route("/callback", methods=["POST"])
+        def callback():
+            # 署名検証
+            signature = request.headers["X-Line-Signature"]
+            body = request.get_data(as_text=True)
+            
+            try:
+                self.handler.handle(body, signature)
+            except InvalidSignatureError:
+                logger.warning("Invalid signature. Aborting request.")
+                abort(400)
+            
+            return "OK"
+        
+        @self.handler.add(MessageEvent, message=TextMessage)
+        def handle_message(event):
+            text = event.message.text
+            
+            # 課金確認の応答をチェック
+            if text.startswith("許可:") or text.startswith("拒否:"):
+                confirmation_id = text.split(":", 1)[1]
+                response = "許可" if text.startswith("許可:") else "拒否"
+                
+                if confirmation_id in self.pending_confirmations:
+                    # 確認結果を保存（別のモジュールから参照できるように）
+                    self._save_confirmation_result(confirmation_id, response)
+                    
+                    reply_text = f"✅ {response}しました" if response == "許可" else f"❌ {response}しました"
+                    self.line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=reply_text)
+                    )
+                    del self.pending_confirmations[confirmation_id] # 応答済みを削除
+                else:
+                    self.line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text="⚠️ 確認IDが見つかりません")
+                    )
+            else:
+                # 通常のメッセージ（エージェントへの指示として処理）
+                self._save_user_command(text, event.source.user_id)
+                self.line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="📝 指示を受け付けました")
+                )
+        
+        return app
+    
+    def _save_confirmation_result(self, confirmation_id: str, response: str):
+        """
+        確認結果を保存
+        
+        Args:
+            confirmation_id: 確認ID
+            response: 応答（許可/拒否）
+        """
+        result_file = f"/home/pi/autonomous_ai_BCNOFNe_system/billing/confirmations/{confirmation_id}.json"
+        os.makedirs(os.path.dirname(result_file), exist_ok=True)
+        
+        with open(result_file, "w", encoding="utf-8") as f:
+            json.dump({
+                "confirmation_id": confirmation_id,
+                "response": response,
+                "timestamp": datetime.now().isoformat()
+            }, f, ensure_ascii=False, indent=2)
+        logger.info(f"確認結果を保存しました: {confirmation_id} - {response}")
+    
+    def _save_user_command(self, command: str, user_id: str):
+        """
+        ユーザーコマンドを保存
+        
+        Args:
+            command: コマンド
+            user_id: ユーザーID
+        """
+        command_file = "/home/pi/autonomous_ai_BCNOFNe_system/commands/user_commands.jsonl"
+        os.makedirs(os.path.dirname(command_file), exist_ok=True)
+        
+        with open(command_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps({
+                "command": command,
+                "user_id": user_id,
+                "timestamp": datetime.now().isoformat()
+            }, ensure_ascii=False) + "\n")
+        logger.info(f"ユーザーコマンドを保存しました: {command}")
+
+
+# (新仕様: Gunicorn対応版)
+def create_app():
+    bot = LINEBot()
+    return bot.create_webhook_app()
+
+app = create_app()
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+```
 
 </details>
 
